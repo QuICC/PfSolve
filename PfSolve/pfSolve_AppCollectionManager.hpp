@@ -24,7 +24,7 @@
 //#include <iostream>
 #include <map> // C++ for now
 
-#include "QuICC/Math/PfSolve/pfSolve.h"
+#include "pfSolve.h"
 
 typedef struct PfSolve_MapKey_JonesWorland {
 	int64_t size[2];
