@@ -548,6 +548,7 @@ static inline PfSolveResult initParametersAPI(PfSolveApplication* app, PfSolveSp
 static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolveSpecializationConstantsLayout* sc) {
 	sc->tempStr = (char*)calloc(sc->maxTempLength, sizeof(char));
 	if (!sc->tempStr) return PFSOLVE_ERROR_MALLOC_FAILED;
+	char name[50];
 	sc->tempLen = 0;
 	sc->currentLen = 0;
 
@@ -562,6 +563,11 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
     else
 		sc->outputsStruct.type = 200 + sc->floatTypeOutputMemoryCode;
 	PfAllocateContainerFlexible(sc, &sc->outputsStruct, 50);
+
+	sc->sdataStruct.type = 200 + sc->floatTypeCode; // need to fix
+	PfAllocateContainerFlexible(sc, &sc->sdataStruct, 50);
+	sprintf(name, "sdata");
+	PfSetContainerName(sc, &sc->sdataStruct, name);
 
 	sc->gl_LocalInvocationID_x.type = 100 + sc->uintType32Code;
 	PfAllocateContainerFlexible(sc, &sc->gl_LocalInvocationID_x, 50);
@@ -817,6 +823,7 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 static inline PfSolveResult initParametersAPI_Pf(PfSolveApplication* app, PfSolveSpecializationConstantsLayout* sc) {
 	sc->tempStr = (char*)calloc(sc->maxTempLength, sizeof(char));
 	if (!sc->tempStr) return PFSOLVE_ERROR_MALLOC_FAILED;
+	char name[50];
 	sc->tempLen = 0;
 	sc->currentLen = 0;
 
@@ -834,6 +841,10 @@ static inline PfSolveResult initParametersAPI_Pf(PfSolveApplication* app, PfSolv
 	PfAllocateContainerFlexible(sc, &sc->PfStruct, 50);
 	sprintf(sc->PfStruct.name, "Pf");
 
+	sc->sdataStruct.type = 200 + sc->floatTypeCode; // need to fix
+	PfAllocateContainerFlexible(sc, &sc->sdataStruct, 50);
+	sprintf(name, "sdata");
+	PfSetContainerName(sc, &sc->sdataStruct, name);
 
 	sc->gl_LocalInvocationID_x.type = 100 + sc->uintType32Code;
 	PfAllocateContainerFlexible(sc, &sc->gl_LocalInvocationID_x, 50);
@@ -1115,6 +1126,7 @@ static inline PfSolveResult freeParametersAPI_JW(PfSolveApplication* app, PfSolv
 	sc->tempStr = 0;
 	PfDeallocateContainer(sc, &sc->inputsStruct);
 	PfDeallocateContainer(sc, &sc->outputsStruct);
+	PfDeallocateContainer(sc, &sc->sdataStruct);
 	
 	PfDeallocateContainer(sc, &sc->gl_LocalInvocationID_x);
 	PfDeallocateContainer(sc, &sc->gl_LocalInvocationID_y);
@@ -1175,7 +1187,8 @@ static inline PfSolveResult freeParametersAPI_Pf(PfSolveApplication* app, PfSolv
 	PfDeallocateContainer(sc, &sc->qDyStruct);
 	PfDeallocateContainer(sc, &sc->qDzStruct);
 	PfDeallocateContainer(sc, &sc->PfStruct);
-
+	PfDeallocateContainer(sc, &sc->sdataStruct);
+	
 	PfDeallocateContainer(sc, &sc->gl_LocalInvocationID_x);
 	PfDeallocateContainer(sc, &sc->gl_LocalInvocationID_y);
 	PfDeallocateContainer(sc, &sc->gl_LocalInvocationID_z);
