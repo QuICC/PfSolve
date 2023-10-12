@@ -1486,13 +1486,13 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//	sprintf(fname, "compute_flux_D_size_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "_logicblock_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.size[2], app->configuration.logicBlock[0], app->configuration.logicBlock[1], app->configuration.logicBlock[2]);
 	//}
 	if (app->configuration.jw_type >= 10) {
-		sprintf(fname, "PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.upperBound, app->configuration.jw_type, app->configuration.jw_control_bitmask);
+		sprintf(fname, "%s/PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.upperBound, app->configuration.jw_type, app->configuration.jw_control_bitmask);
 	}
 	if (app->configuration.block) {
-		sprintf(fname, "PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
+		sprintf(fname, "%s/PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
 	}
 	if (app->configuration.LDA) {
-		sprintf(fname, "PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
+		sprintf(fname, "%s/PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
 	}
 	kernelCache = fopen(fname, "rb");
 	if (kernelCache != 0) {

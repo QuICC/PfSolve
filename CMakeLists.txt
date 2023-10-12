@@ -110,6 +110,8 @@ elseif(${VKFFT_BACKEND} EQUAL 3)
 	target_link_libraries(${PROJECT_NAME} PUBLIC OpenCL PfSolve)
 endif()
 
+add_definitions(-DPFSOLVE_KERNELS_DIR="${CMAKE_BINARY_DIR}")
+
 if(build_VkFFT_FFTW_precision)
 	add_definitions(-DUSE_FFTW)
 	set(FFTW3_LIB_DIR "/usr/lib/x86_64-linux-gnu/")
