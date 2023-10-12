@@ -350,19 +350,19 @@ static inline void appendRegistersInitialization_block(PfSolveSpecializationCons
 	PfSetToZero(sc, &sc->tempInt);
 
     if (((sc->floatTypeCode % 100) / 10) == 3) {
-		sc->tempQuad.type = 100 + sc->vecTypeCode;
+		sc->tempQuad.type = 100 + typeCode;
 		PfAllocateContainerFlexible(sc, &sc->tempQuad, 50);
 		sprintf(name, "tempQuad");
 		PfDefine(sc, &sc->tempQuad, name);
 		PfSetToZero(sc, &sc->tempQuad);
 
-		sc->tempQuad2.type = 100 + sc->vecTypeCode;
+		sc->tempQuad2.type = 100 + typeCode;
 		PfAllocateContainerFlexible(sc, &sc->tempQuad2, 50);
 		sprintf(name, "tempQuad2");
 		PfDefine(sc, &sc->tempQuad2, name);
 		PfSetToZero(sc, &sc->tempQuad2);
 
-		sc->tempQuad3.type = 100 + sc->vecTypeCode;
+		sc->tempQuad3.type = 100 + typeCode;
 		PfAllocateContainerFlexible(sc, &sc->tempQuad3, 50);
 		sprintf(name, "tempQuad3");
 		PfDefine(sc, &sc->tempQuad3, name);

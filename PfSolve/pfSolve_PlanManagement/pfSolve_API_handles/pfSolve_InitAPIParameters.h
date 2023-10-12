@@ -269,7 +269,7 @@ static inline PfSolveResult initParametersAPI(PfSolveApplication* app, PfSolveSp
 	sc->outputsStruct.type = 200 + sc->outputMemoryCode;
 	PfAllocateContainerFlexible(sc, &sc->outputsStruct, 50);
 
-	sc->sdataStruct.type = 200 + sc->vecTypeCode;
+	sc->sdataStruct.type = 200 + sc->floatTypeCode; // need to fix
 	PfAllocateContainerFlexible(sc, &sc->sdataStruct, 50);
 	sprintf(name, "sdata");
 	PfSetContainerName(sc, &sc->sdataStruct, name);
