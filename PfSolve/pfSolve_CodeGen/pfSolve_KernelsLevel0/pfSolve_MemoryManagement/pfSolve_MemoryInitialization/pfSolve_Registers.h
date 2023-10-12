@@ -77,8 +77,8 @@ static inline void appendRegistersInitialization_compute_Pf(PfSolveSpecializatio
 	PfDefine(sc, &sc->temp1, name);
 	PfSetToZero(sc, &sc->temp1);
 
-	PfAllocateContainerFlexible(sc, &sc->temp2, 50);
 	sc->temp2.type = 100 + sc->floatTypeCode;
+	PfAllocateContainerFlexible(sc, &sc->temp2, 50);
 	sprintf(name, "temp_2");
 	PfDefine(sc, &sc->temp2, name);
 	PfSetToZero(sc, &sc->temp2);
@@ -331,8 +331,8 @@ static inline void appendRegistersInitialization_block(PfSolveSpecializationCons
 	PfDefine(sc, &sc->temp, name);
 	PfSetToZero(sc, &sc->temp);
 
-	PfAllocateContainerFlexible(sc, &sc->temp1, 50);
 	sc->temp1.type = 100 + typeCode;
+	PfAllocateContainerFlexible(sc, &sc->temp1, 50);
 	sprintf(name, "temp_1");
 	PfDefine(sc, &sc->temp1, name);
 	PfSetToZero(sc, &sc->temp1);

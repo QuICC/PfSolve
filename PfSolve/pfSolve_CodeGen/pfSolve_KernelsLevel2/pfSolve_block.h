@@ -61,8 +61,8 @@ static inline PfSolveResult PfSolve_shaderGen_block(PfSolveSpecializationConstan
 	sc->offset_res.data.i = 0;
 
 	if (sc->offsetSolution.type > 100) {
-		PfAllocateContainerFlexible(sc, &sc->offset_res_global, 50);
 		sc->offset_res_global.type = sc->offsetSolution.type;
+		PfAllocateContainerFlexible(sc, &sc->offset_res_global, 50);
 		PfCopyContainer(sc, &sc->offset_res_global, &sc->offsetSolution);
 	}
 	else {
@@ -71,8 +71,8 @@ static inline PfSolveResult PfSolve_shaderGen_block(PfSolveSpecializationConstan
 	}
 
 	if (sc->offsetM.type > 100) {
-		PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
 		sc->offset_md_global.type = sc->offsetM.type;
+		PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
 		PfCopyContainer(sc, &sc->offset_md_global, &sc->offsetM);
 	}
 	else {
