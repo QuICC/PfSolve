@@ -85,9 +85,9 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 			}
 		}
 		PfMul(sc, &sc->rd_copy[i], &sc->rd[i], &sc->md[i], 0);
-		if ((sc->M_size.data.i - 1 - i * sc->num_threads) > 0){
+		temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
+		if (temp_int.data.i > 0){
 			if(i==sc->registers_per_thread-1){
-				temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
 				PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 			}
 			if (!sc->ud_zero){
@@ -151,9 +151,9 @@ static inline void appendMatVecMul_fromGlobal(PfSolveSpecializationConstantsLayo
 			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 			res = PfAppendLine(sc);
 			if (res != PFSOLVE_SUCCESS) return res;*/
-			if ((sc->M_size.data.i - i * sc->localSize[0].data.i) > 0){
+			temp_int.data.i = sc->M_size.data.i - i * sc->localSize[0].data.i;
+			if (temp_int.data.i > 0){
 				if ((i + 1) * sc->localSize[0].data.i > sc->M_size.data.i) {
-					temp_int.data.i = sc->M_size.data.i - i * sc->localSize[0].data.i;
 					PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 				}
 				temp_int.data.i = -sc->KU - i * sc->localSize[0].data.i + j;
