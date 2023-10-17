@@ -178,14 +178,16 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 							if (temp_int.data.i >= sc->warpSize){
 								PfSetToZero(sc, &sc->ld_copy[i]);
 							}else{
-								PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-								PfSetToZero(sc, &sc->ld_copy[i]);
-								if (!sc->ud_zero) {
-									//sc->tempLen = sprintf(sc->tempStr, "\n\
-							temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
+								if (temp_int.data.i > 0) {
+									PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+									PfSetToZero(sc, &sc->ld_copy[i]);
+									if (!sc->ud_zero) {
+										//sc->tempLen = sprintf(sc->tempStr, "\n\
+								temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
 
+									}
+									PfIf_end(sc);
 								}
-								PfIf_end(sc);
 							}
 							PfIf_end(sc);
 						}
@@ -197,14 +199,16 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 								PfSetToZero(sc, &sc->ld_copy[i]);
 							}
 							else{
-								PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-								PfSetToZero(sc, &sc->ld_copy[i]);
-								if (!sc->ud_zero) {
-									//sc->tempLen = sprintf(sc->tempStr, "\n\
-							temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
+								if (temp_int.data.i > 0) {
+									PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+									PfSetToZero(sc, &sc->ld_copy[i]);
+									if (!sc->ud_zero) {
+										//sc->tempLen = sprintf(sc->tempStr, "\n\
+								temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
 
+									}
+									PfIf_end(sc);
 								}
-								PfIf_end(sc);
 							}
 						}
 					}
