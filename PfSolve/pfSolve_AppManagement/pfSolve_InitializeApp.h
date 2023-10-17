@@ -1519,7 +1519,7 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 		}
 	}
 	else {
-		app->configuration.saveApplicationToString = 0;
+		app->configuration.saveApplicationToString = 1;
 	}
 	if (app->configuration.finiteDifferences) {
 		resFFT = PfSolve_Plan_FiniteDifferences(app, app->localFFTPlan);

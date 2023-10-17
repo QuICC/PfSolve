@@ -85,22 +85,23 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 			}
 		}
 		PfMul(sc, &sc->rd_copy[i], &sc->rd[i], &sc->md[i], 0);
-		
-		if(i==sc->registers_per_thread-1){
-			temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
-			PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-		}
-		if (!sc->ud_zero){
-			PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
-			PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp);
-		//	sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ud_%" PRIu64 " * temp_0;\n", i, i);
+		if (sc->M_size.data.i - 1 - i * sc->num_threads > 0){
+			if(i==sc->registers_per_thread-1){
+				temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
+				PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+			}
+			if (!sc->ud_zero){
+				PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
+				PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp);
+			//	sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ud_%" PRIu64 " * temp_0;\n", i, i);
+				
+				
+			}
 			
-			
-		}
-		
-		if(i==sc->registers_per_thread-1){
-			PfIf_end(sc);
-			
+			if(i==sc->registers_per_thread-1){
+				PfIf_end(sc);
+				
+			}
 		}
 		if(i==0){
 			temp_int.data.i = 0;
@@ -150,45 +151,49 @@ static inline void appendMatVecMul_fromGlobal(PfSolveSpecializationConstantsLayo
 			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 			res = PfAppendLine(sc);
 			if (res != PFSOLVE_SUCCESS) return res;*/
-			if ((i + 1) * sc->localSize[0].data.i > sc->M_size.data.i) {
-				temp_int.data.i = sc->M_size.data.i - i * sc->localSize[0].data.i;
-				PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-			}
-			temp_int.data.i = -sc->KU - i * sc->localSize[0].data.i + j;
-            if(temp_int.data.i > 0)
-				PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+			if (sc->M_size.data.i - 1 - i * sc->localSize[0].data.i > 0){
+				if ((i + 1) * sc->localSize[0].data.i > sc->M_size.data.i) {
+					temp_int.data.i = sc->M_size.data.i - i * sc->localSize[0].data.i;
+					PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+				}
+				temp_int.data.i = -sc->KU - i * sc->localSize[0].data.i + j;
+				if(temp_int.data.i > 0)
+					PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
-			temp_int.data.i = sc->M_size.data.i - sc->KU - i * sc->localSize[0].data.i + j;
-			PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-			//sc->tempLen = sprintf(sc->tempStr, "	if((%s + %" PRIi64 ">= 0)&&((%s + %" PRIi64 "< 0))){\n", sc->gl_LocalInvocationID_x, (int64_t)i * sc->localSize[0] - sc->KU + j, sc->gl_LocalInvocationID_x, (int64_t)i * sc->localSize[0] + sc->KU - j - sc->M_size);
-			
-			int64_t shift = sc->KU - j;
-			//if (shift < 0) shift = 0;
-			temp_int.data.i = i * sc->localSize[0].data.i + shift;
-			PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
-			appendSharedToRegisters(sc, &sc->temp, &sc->tempInt);
+				temp_int.data.i = sc->M_size.data.i - sc->KU - i * sc->localSize[0].data.i + j;
+				if (temp_int.data.i > 0){
+					PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+					//sc->tempLen = sprintf(sc->tempStr, "	if((%s + %" PRIi64 ">= 0)&&((%s + %" PRIi64 "< 0))){\n", sc->gl_LocalInvocationID_x, (int64_t)i * sc->localSize[0] - sc->KU + j, sc->gl_LocalInvocationID_x, (int64_t)i * sc->localSize[0] + sc->KU - j - sc->M_size);
+					
+					int64_t shift = sc->KU - j;
+					//if (shift < 0) shift = 0;
+					temp_int.data.i = i * sc->localSize[0].data.i + shift;
+					PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
+					appendSharedToRegisters(sc, &sc->temp, &sc->tempInt);
 
-			if (sc->offset_md_global.type > 100) {
-				temp_int.data.i = i * sc->localSize[0].data.i + shift + j * sc->M_size.data.i;
-				PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
-				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->offset_md_global);
-			}
-			else {
-				temp_int.data.i = i * sc->localSize[0].data.i + shift + j * sc->M_size.data.i + sc->offset_md_global.data.i;
-				PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
-			}
-			appendGlobalToRegisters(sc, &sc->temp1, &sc->inputsStruct, &sc->tempInt);
-			PfMul(sc, &sc->temp, &sc->temp, &sc->temp1, &sc->temp2);
-			PfAdd(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
-			//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += sdata[%s + %" PRIu64 "] * %s%s[%s +%" PRIu64 "]%s;\n", i, sc->gl_LocalInvocationID_x, i * sc->localSize[0] + sc->KU - j, sc->convTypeLeftInput, sc->inputsStruct, sc->gl_LocalInvocationID_x, shift + j * sc->M_size + sc->offset_md_global, sc->convTypeRightInput);
-			
-			PfIf_end(sc);
-			temp_int.data.i = -sc->KU - i * sc->localSize[0].data.i + j;
-            if(temp_int.data.i > 0)
-				PfIf_end(sc);
+					if (sc->offset_md_global.type > 100) {
+						temp_int.data.i = i * sc->localSize[0].data.i + shift + j * sc->M_size.data.i;
+						PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
+						PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->offset_md_global);
+					}
+					else {
+						temp_int.data.i = i * sc->localSize[0].data.i + shift + j * sc->M_size.data.i + sc->offset_md_global.data.i;
+						PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
+					}
+					appendGlobalToRegisters(sc, &sc->temp1, &sc->inputsStruct, &sc->tempInt);
+					PfMul(sc, &sc->temp, &sc->temp, &sc->temp1, &sc->temp2);
+					PfAdd(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
+					//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += sdata[%s + %" PRIu64 "] * %s%s[%s +%" PRIu64 "]%s;\n", i, sc->gl_LocalInvocationID_x, i * sc->localSize[0] + sc->KU - j, sc->convTypeLeftInput, sc->inputsStruct, sc->gl_LocalInvocationID_x, shift + j * sc->M_size + sc->offset_md_global, sc->convTypeRightInput);
+					
+					PfIf_end(sc);
+				}
+				temp_int.data.i = -sc->KU - i * sc->localSize[0].data.i + j;
+				if(temp_int.data.i > 0)
+					PfIf_end(sc);
 
-			if ((i + 1) * sc->localSize[0].data.i > sc->M_size.data.i) {
-				PfIf_end(sc);
+				if ((i + 1) * sc->localSize[0].data.i > sc->M_size.data.i) {
+					PfIf_end(sc);
+				}
 			}
 			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 			res = PfAppendLine(sc);

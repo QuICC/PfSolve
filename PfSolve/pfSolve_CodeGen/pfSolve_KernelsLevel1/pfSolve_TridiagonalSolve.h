@@ -126,6 +126,8 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 								PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
 								PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
 							}else{
+								if (temp_int.data.i < 0) 
+									temp_int.data.i = 0;
 								PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 								PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
 								PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
@@ -448,9 +450,13 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 		//sc->tempLen = sprintf(sc->tempStr, "	if (acc_%" PRIi64 "==0){\n",i);
 		////sc->tempLen = sprintf(sc->tempStr, "	if ((id_x<%" PRIi64 ") && (id_x>=%" PRIi64 ")){\n", stride - i * sc->num_threads, sc->M_size.x_num - stride - i * sc->num_threads);
 		temp_int.data.i = stride - i * sc->num_threads;
+		if (temp_int.data.i < 0) 
+			temp_int.data.i = 0;
 		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
 		temp_int.data.i = sc->M_size.data.i - stride - i * sc->num_threads;
+		if (temp_int.data.i < 0) 
+			temp_int.data.i = 0;
 		PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
 		PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
