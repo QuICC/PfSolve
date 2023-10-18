@@ -87,7 +87,7 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 		PfMul(sc, &sc->rd_copy[i], &sc->rd[i], &sc->md[i], 0);
 		temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
 		if (temp_int.data.i > 0){
-			if(i==sc->registers_per_thread-1){
+			if(temp_int.data.i < sc->localSize[0].data.i){
 				PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 			}
 			if (!sc->ud_zero){
@@ -98,7 +98,7 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 				
 			}
 			
-			if(i==sc->registers_per_thread-1){
+			if(temp_int.data.i < sc->localSize[0].data.i){
 				PfIf_end(sc);
 				
 			}

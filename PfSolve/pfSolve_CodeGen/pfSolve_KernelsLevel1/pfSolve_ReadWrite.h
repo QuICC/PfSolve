@@ -1549,7 +1549,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 		}
 		else
 		{
-			PfSetToZero(sc, &sc->md[i]);
+			//PfSetToZero(sc, &sc->md[i]);//fix
 		}
 		/*if((i==0)){
 			sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f\\n\", inoutID, md_%" PRIu64 ");\n", i);
@@ -1563,7 +1563,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			appendGlobalToRegisters(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
 		}
 		else {
-			PfSetToZero(sc, &sc->ld[i]);
+			//PfSetToZero(sc, &sc->ld[i]);//fix
 
 		}
 		/*if((i==0)){
@@ -1578,7 +1578,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			appendGlobalToRegisters(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
 		}
 		else {
-			PfSetToZero(sc, &sc->ud[i]);
+			//PfSetToZero(sc, &sc->ud[i]);//fix
 			
 		}
 		

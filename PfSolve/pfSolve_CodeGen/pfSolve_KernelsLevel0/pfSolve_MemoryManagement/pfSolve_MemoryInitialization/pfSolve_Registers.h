@@ -184,11 +184,11 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 		PfDefine(sc, &sc->rd_copy[i], name);
 		PfSetToZero(sc, &sc->rd_copy[i]);
 	}
-
+	//we focus on bidiagonal systems for now 
 	for (int i = 0; i < sc->registers_per_thread; i++) {
 		sc->ud[i].type = 100 + sc->floatTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->ud[i], 50);
-		sprintf(name, "ud_%d", i);
+		sprintf(name, "uld_%d", i);
 		PfDefine(sc, &sc->ud[i], name);
 		PfSetToZero(sc, &sc->ud[i]);
 	}
@@ -196,32 +196,35 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 	for (int i = 0; i < sc->registers_per_thread; i++) {
 		sc->ld[i].type = 100 + sc->floatTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->ld[i], 50);
-		sprintf(name, "ld_%d", i);
-		PfDefine(sc, &sc->ld[i], name);
-		PfSetToZero(sc, &sc->ld[i]);
+		sprintf(name, "uld_%d", i);
+		PfSetContainerName(sc, &sc->ld[i], name);
+		//PfDefine(sc, &sc->ld[i], name);
+		//PfSetToZero(sc, &sc->ld[i]);
 	}
 	if (!sc->upperBound) {
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			sc->ud_copy[i].type = 100 + sc->floatTypeCode;
 			PfAllocateContainerFlexible(sc, &sc->ud_copy[i], 50);
-			sprintf(name, "ud_copy_%d", i);
-			PfDefine(sc, &sc->ud_copy[i], name);
-			PfSetToZero(sc, &sc->ud_copy[i]);
+			sprintf(name, "copy_%d", i);
+			PfSetContainerName(sc, &sc->ud_copy[i], name);
+			//PfDefine(sc, &sc->ud_copy[i], name);
+			//PfSetToZero(sc, &sc->ud_copy[i]);
 		}
 	}
 	else {
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			sc->ld_copy[i].type = 100 + sc->floatTypeCode;
 			PfAllocateContainerFlexible(sc, &sc->ld_copy[i], 50);
-			sprintf(name, "ld_copy_%d", i);
-			PfDefine(sc, &sc->ld_copy[i], name);
-			PfSetToZero(sc, &sc->ld_copy[i]);
+			sprintf(name, "copy_%d", i);
+			PfSetContainerName(sc, &sc->ld_copy[i], name);
+			//PfDefine(sc, &sc->ld_copy[i], name);
+			//PfSetToZero(sc, &sc->ld_copy[i]);
 		}
 	}
 	for (int i = 0; i < sc->registers_per_thread; i++) {
 		sc->md[i].type = 100 + sc->floatTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->md[i], 50);
-		sprintf(name, "md_%d", i);
+		sprintf(name, "copy_%d", i);
 		PfDefine(sc, &sc->md[i], name);
 		PfSetToZero(sc, &sc->md[i]);
 	}
