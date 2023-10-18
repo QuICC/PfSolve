@@ -159,9 +159,6 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
                 sc->ld_zero = 1;
         }
 		appendMatVecMul(sc);
-		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-			PfSetToZero(sc, &sc->ld[i]); // same as ud	
-		}
 		//sc->read_SharedToRegisters = 0;
 		//sc->write_RegistersToShared=0;
 	}
