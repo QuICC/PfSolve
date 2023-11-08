@@ -2,7 +2,7 @@
 
 PfSolve currently contains the following algorithms:
 
-- Bi-/Tri- diagonal matrix solvers based on a Parallel Cyclic Reduction algorithm implemented with single-warp GPU programming approach. See: docs/pasc23_Tolmachev.pdf for reference. This code can be fused with banded matrix multiplications to achieve one step of Jones Worland algorithm from https://www.research-collection.ethz.ch/handle/20.500.11850/505302.
+- Bi-/Tri- diagonal matrix solvers based on a Parallel Cyclic Reduction + Thomas algorithm implemented with single-warp GPU programming approach. See: docs/pasc23_Tolmachev.pdf for reference. This code can be fused with banded matrix multiplications to achieve one step of Jones Worland algorithm from https://www.research-collection.ethz.ch/handle/20.500.11850/505302.
 - Block/Copy/Scaling/dgbmv optimized BLAS routines. 
 - Finite Difference solver as a demonstration of a single-warp GPU programming approach. See: https://www.youtube.com/watch?v=lHlFPqlOezo and docs/report_Tolmachev_2023.pdf for reference.
 - Draft of a non-uniform FFT extension for VkFFT - single-warp runtime grid-optimization approach for kernel convolution stage of nuFFT. See docs/report_Tolmachev_2023.pdf for reference.

@@ -1485,41 +1485,43 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//if (app->configuration.compute_flux_D) {
 	//	sprintf(fname, "compute_flux_D_size_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "_logicblock_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.size[2], app->configuration.logicBlock[0], app->configuration.logicBlock[1], app->configuration.logicBlock[2]);
 	//}
-	if (app->configuration.jw_type >= 10) {
-		sprintf(fname, "%s/PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.upperBound, app->configuration.jw_type, app->configuration.jw_control_bitmask);
-	}
-	if (app->configuration.block) {
-		sprintf(fname, "%s/PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
-	}
-	if (app->configuration.LDA) {
-		sprintf(fname, "%s/PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
-	}
-	kernelCache = fopen(fname, "rb");
-	if (kernelCache != 0) {
-		fseek(kernelCache, 0, SEEK_END);
-		str_len = ftell(kernelCache);
-		fseek(kernelCache, 0, SEEK_SET);
-		if (str_len < 10) {
-			app->configuration.saveApplicationToString = 0;
-			fclose(kernelCache);
+	if (!inputLaunchConfiguration.disableCaching) {
+		if (app->configuration.jw_type >= 10) {
+			sprintf(fname, "%s/PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.upperBound, app->configuration.jw_type, app->configuration.jw_control_bitmask);
+		}
+		if (app->configuration.block) {
+			sprintf(fname, "%s/PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
+		}
+		if (app->configuration.LDA) {
+			sprintf(fname, "%s/PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
+		}
+		kernelCache = fopen(fname, "rb");
+		if (kernelCache != 0) {
+			fseek(kernelCache, 0, SEEK_END);
+			str_len = ftell(kernelCache);
+			fseek(kernelCache, 0, SEEK_SET);
+			if (str_len < 10) {
+				app->configuration.saveApplicationToString = 0;
+				fclose(kernelCache);
+			}
+			else {
+
+				app->configuration.loadApplicationString = malloc(str_len);
+				if (!app->configuration.loadApplicationString) {
+					deletePfSolve(app);
+					return PFSOLVE_ERROR_MALLOC_FAILED;
+				}
+				fread(app->configuration.loadApplicationString, str_len, 1, kernelCache);
+				fclose(kernelCache);
+
+				memcpy(&app->applicationStringSize, app->configuration.loadApplicationString, sizeof(uint64_t));
+				app->currentApplicationStringPos = 5 * sizeof(uint64_t);
+				app->configuration.loadApplicationFromString = 1;
+			}
 		}
 		else {
-
-			app->configuration.loadApplicationString = malloc(str_len);
-			if (!app->configuration.loadApplicationString) {
-				deletePfSolve(app);
-				return PFSOLVE_ERROR_MALLOC_FAILED;
-			}
-			fread(app->configuration.loadApplicationString, str_len, 1, kernelCache);
-			fclose(kernelCache);
-
-			memcpy(&app->applicationStringSize, app->configuration.loadApplicationString, sizeof(uint64_t));
-			app->currentApplicationStringPos = 5 * sizeof(uint64_t);
-			app->configuration.loadApplicationFromString = 1;
+			app->configuration.saveApplicationToString = 1;
 		}
-	}
-	else {
-		app->configuration.saveApplicationToString = 1;
 	}
 	if (app->configuration.finiteDifferences) {
 		resFFT = PfSolve_Plan_FiniteDifferences(app, app->localFFTPlan);

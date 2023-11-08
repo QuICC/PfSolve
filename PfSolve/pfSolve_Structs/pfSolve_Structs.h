@@ -258,6 +258,7 @@ typedef struct {
 	uint64_t keepShaderCode;//will keep shader code and print all executed shaders during the plan execution in order (0 - off, 1 - on)
 	uint64_t printMemoryLayout;//will print order of buffers used in shaders (0 - off, 1 - on)
 
+	int disableCaching;
 	uint64_t saveApplicationToString;//will save all compiled binaries to PfSolveApplication.saveApplicationString (will be allocated by PfSolve, deallocated with deletePfSolve call). Currently disabled in Metal backend. (0 - off, 1 - on)
 
 	uint64_t loadApplicationFromString;//will load all binaries from loadApplicationString instead of recompiling them (must be allocated by user, must contain what saveApplicationToString call generated previously in PfSolveApplication.saveApplicationString). Currently disabled in Metal backend. (0 - off, 1 - on). Mutually exclusive with saveApplicationToString

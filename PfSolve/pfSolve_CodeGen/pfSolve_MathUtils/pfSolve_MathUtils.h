@@ -74,6 +74,77 @@ static inline void PfCopyContainer(PfSolveSpecializationConstantsLayout* sc, PfC
 	sc->res = PFSOLVE_ERROR_MATH_FAILED;
 	return;
 }
+static inline void PfSwapContainers(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	if ((((out->type % 100) / 10) == 3) && ((out->type % 10) == 2)) {
+		PfSwapContainers(sc, &out->data.dd[0], &in->data.dd[0]);
+		PfSwapContainers(sc, &out->data.dd[1], &in->data.dd[1]);
+	}
+	if (out->type > 100) {
+		if (in->type > 100) {
+			if (out->type == in->type) {
+				int len = in->size;
+				in->size = out->size;
+				out->size = len;
+
+				char* temp = in->name;
+				in->name = out->name;
+				out->name = temp;
+
+				switch (out->type % 10) {
+				case 3:
+					PfSwapContainers(sc, &out->data.c[0], &in->data.c[0]);
+					PfSwapContainers(sc, &out->data.c[1], &in->data.c[1]);
+					return;
+				}
+				return;
+			}
+		}
+		else {
+		}
+	}
+	else {
+		if (in->type > 100) {
+		}
+		else {
+			if (out->type == in->type) {
+				switch (out->type % 10) {
+				case 1:
+				{
+					pfINT temp;
+					temp = in->data.i;
+					in->data.i = out->data.i;
+					out->data.i = temp;
+					return;
+				}
+				case 2:
+				{
+					pfLD temp;
+					temp = in->data.d;
+					in->data.d = out->data.d;
+					out->data.d = temp;
+					return;
+				}
+				case 3:
+				{
+					pfLD temp;
+					temp = in->data.c[0].data.d;
+					in->data.c[0].data.d = out->data.c[0].data.d;
+					out->data.c[0].data.d = temp;
+
+					temp = in->data.c[1].data.d;
+					in->data.c[1].data.d = out->data.c[1].data.d;
+					out->data.c[1].data.d = temp;
+					return;
+				}
+				}
+			}
+		}
+	}
+	sc->res = PFSOLVE_ERROR_MATH_FAILED;
+	return;
+}
+
 static inline void PfAllocateContainerFlexible(PfSolveSpecializationConstantsLayout* sc, PfContainer* container, int size) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	if (container->size != 0) return;
@@ -3435,7 +3506,7 @@ static inline void PfRsqrt(PfSolveSpecializationConstantsLayout* sc, PfContainer
 				switch (in_1->type % 10) {
 				case 2:
 					sc->tempLen = sprintf(sc->tempStr, "\
-%s = %.17Le;\n", out->name, (long double)(1.0l / pfsqrt(in_1->data.d)));
+%s = %.17Le;\n", out->name, (long double)(pfFPinit("1.0") / pfsqrt(in_1->data.d)));
 					PfAppendLine(sc);
 					return;
 				}
@@ -3450,7 +3521,7 @@ static inline void PfRsqrt(PfSolveSpecializationConstantsLayout* sc, PfContainer
 			else {
 				switch (in_1->type % 10) {
 				case 2:
-					out->data.d = 1.0l / pfsqrt(in_1->data.d);
+					out->data.d = pfFPinit("1.0") / pfsqrt(in_1->data.d);
 					return;
 				}
 			}
@@ -3561,6 +3632,82 @@ if (%d) {\n", (left->data.d == right->data.d));
 	sc->res = PFSOLVE_ERROR_MATH_FAILED;
 	return;
 }
+static inline void PfIf_neq_start(PfSolveSpecializationConstantsLayout* sc, PfContainer* left, PfContainer* right) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	if (left->type > 100) {
+		if (right->type > 100) {
+			sc->tempLen = sprintf(sc->tempStr, "\
+if (%s != %s) {\n", left->name, right->name);
+			PfAppendLine(sc);
+			return;
+		}
+		else {
+			switch (right->type % 10) {
+			case 1:
+				sc->tempLen = sprintf(sc->tempStr, "\
+if (%s != %" PRIi64 ") {\n", left->name, right->data.i);
+				PfAppendLine(sc);
+				return;
+			case 2:
+				sc->tempLen = sprintf(sc->tempStr, "\
+if (%s != %.17Le) {\n", left->name, (long double)right->data.d);
+				PfAppendLine(sc);
+				return;
+			}
+		}
+	}
+	else {
+		if (right->type > 100) {
+			switch (left->type % 10) {
+			case 1:
+				sc->tempLen = sprintf(sc->tempStr, "\
+if (%" PRIi64 " != %s) {\n", left->data.i, right->name);
+				PfAppendLine(sc);
+				return;
+			case 2:
+				sc->tempLen = sprintf(sc->tempStr, "\
+if (%.17Le != %s) {\n", (long double)left->data.d, right->name);
+				PfAppendLine(sc);
+				return;
+			}
+		}
+		else {
+			switch (left->type % 10) {
+			case 1:
+				switch (right->type % 10) {
+				case 1:
+					sc->tempLen = sprintf(sc->tempStr, "\
+if (%d) {\n", (left->data.i != right->data.i));
+					PfAppendLine(sc);
+					return;
+				case 2:
+					sc->tempLen = sprintf(sc->tempStr, "\
+if (%d) {\n", (left->data.i != right->data.d));
+					PfAppendLine(sc);
+					return;
+				}
+				break;
+			case 2:
+				switch (right->type % 10) {
+				case 1:
+					sc->tempLen = sprintf(sc->tempStr, "\
+if (%d) {\n", (left->data.d != right->data.i));
+					PfAppendLine(sc);
+					return;
+				case 2:
+					sc->tempLen = sprintf(sc->tempStr, "\
+if (%d) {\n", (left->data.d != right->data.d));
+					PfAppendLine(sc);
+					return;
+				}
+				return;
+			}
+		}
+	}
+	sc->res = PFSOLVE_ERROR_MATH_FAILED;
+	return;
+}
+
 static inline void PfIf_lt_start(PfSolveSpecializationConstantsLayout* sc, PfContainer* left, PfContainer* right) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	if (left->type > 100) {

@@ -57,7 +57,10 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 		appendBarrier(sc);
 		
 	}*/
-	int64_t maxPCRiteration = (int64_t)ceil(log2(sc->M_size_pow2.data.i));
+	//int64_t maxPCRiteration = (int64_t)ceil(log2(sc->M_size_pow2.data.i));
+	//int64_t BSsystemSize = 0;// sc->M_size_pow2.data.i / sc->warpSize;
+	int64_t maxPCRiteration = (int64_t)ceil(log2(sc->warpSize)); //(int64_t)ceil(log2(sc->M_size_pow2.data.i));
+	int64_t BSsystemSize = sc->M_size_pow2.data.i / sc->warpSize;
 	int64_t stride = 1;
 	int64_t next_stride = 1;
     /* if(!sc->ud_zero)
@@ -389,6 +392,16 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 		
 	}
 
+	for (int64_t i = 1; i < BSsystemSize; i++) {
+		if (!sc->ld_zero) {
+			PfMul(sc, &sc->temp, &sc->ld[i], &sc->rd[i-1], 0);
+			PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
+		}
+		if (!sc->ud_zero) {
+			PfMul(sc, &sc->temp, &sc->ud[BSsystemSize-i- 1], &sc->rd[BSsystemSize-i], 0);
+			PfSub(sc, &sc->rd[BSsystemSize-i -1], &sc->rd[BSsystemSize-i -1], &sc->temp);
+		}
+	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type > 100)) {
 			temp_int.data.i = 0;
