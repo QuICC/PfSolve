@@ -980,11 +980,7 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 		return resFFT;
 	}
 	//set main parameters:
-	if (inputLaunchConfiguration.FFTdim == 0) {
-		deletePfSolve(app);
-		return PFSOLVE_ERROR_EMPTY_FFTdim;
-	}
-	app->configuration.FFTdim = inputLaunchConfiguration.FFTdim;
+	app->configuration.FFTdim = 1;
 	if (inputLaunchConfiguration.size[0] == 0) {
 		deletePfSolve(app);
 		return PFSOLVE_ERROR_EMPTY_size;
@@ -1182,9 +1178,9 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 	app->configuration.offsetM = inputLaunchConfiguration.offsetM;
 	app->configuration.offsetV = inputLaunchConfiguration.offsetV;
 	app->configuration.offsetSolution = inputLaunchConfiguration.offsetSolution;
-	app->configuration.upperBound = inputLaunchConfiguration.upperBound;
-	app->configuration.M_size = inputLaunchConfiguration.M_size;
-	app->configuration.M_size_pow2 = inputLaunchConfiguration.M_size_pow2;
+	app->configuration.upperBanded = inputLaunchConfiguration.upperBanded;
+	app->configuration.M_size = inputLaunchConfiguration.size[0];
+	app->configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)app->configuration.M_size)));
 	app->configuration.inputZeropad[0] = inputLaunchConfiguration.inputZeropad[0];
 	app->configuration.inputZeropad[1] = inputLaunchConfiguration.inputZeropad[1];
 	app->configuration.outputZeropad[0] = inputLaunchConfiguration.outputZeropad[0];
@@ -1487,7 +1483,7 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//}
 	if (!inputLaunchConfiguration.disableCaching) {
 		if (app->configuration.jw_type >= 10) {
-			sprintf(fname, "%s/PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.upperBound, app->configuration.jw_type, app->configuration.jw_control_bitmask);
+			sprintf(fname, "%s/PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask);
 		}
 		if (app->configuration.block) {
 			sprintf(fname, "%s/PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);

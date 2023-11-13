@@ -87,9 +87,9 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	}
 	if (sc->performTriSolve == 2)
 	{
-		sc->upperBound = !sc->upperBound;
+		sc->upperBanded = !sc->upperBanded;
 	}
-	if (sc->upperBound){
+	if (sc->upperBanded){
 		sc->ud_zero = 0;
 		sc->ld_zero = 1;
 		
@@ -141,7 +141,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	}
 	if (sc->performTriSolve == 2)
 	{
-		sc->upperBound = !sc->upperBound;
+		sc->upperBanded = !sc->upperBanded;
 	}
 	//appendGlobalToShared_all(sc);
 	
@@ -164,7 +164,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	}
 	//appendBarrier(sc);
 	
-	if (sc->upperBound) {
+	if (sc->upperBanded) {
 		if (sc->offsetM.type > 100) {
 			PfDeallocateContainer(sc, &sc->offset_md_global);
 			PfDeallocateContainer(sc, &sc->offset_ud_global);
@@ -183,7 +183,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	sc->offset_md.data.i = 0;
 	sc->offset_res.data.i = 2 * sc->M_size.data.i;
 	//sc->offset_res_global.data.i = sc->offsetSolution.data.i;
-	if (sc->upperBound){
+	if (sc->upperBanded){
 		sc->ud_zero = 1;
 		sc->ld_zero = 0;
 		sc->offset_ld.data.i = sc->M_size.data.i;
@@ -248,7 +248,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		//sc->read_SharedToRegisters = 0;
 	}
 
-	if (sc->upperBound) {
+	if (sc->upperBanded) {
 		if (sc->offsetV.type > 100) {
 			//PfDeallocateContainer(sc, &sc->offset_md_global);
 			PfDeallocateContainer(sc, &sc->offset_ld_global);

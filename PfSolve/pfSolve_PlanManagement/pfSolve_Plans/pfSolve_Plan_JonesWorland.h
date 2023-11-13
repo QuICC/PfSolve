@@ -185,7 +185,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	//axisStride[3] = axisStride[2];
 	//axisStride[4] = axisStride[3];
 
-	/*if ((axis->specializationConstants.inputStride[1] == axis->specializationConstants.M_size - 1) && (!axis->specializationConstants.upperBound)) {
+	/*if ((axis->specializationConstants.inputStride[1] == axis->specializationConstants.M_size - 1) && (!axis->specializationConstants.upperBanded)) {
 		axis->specializationConstants.M_size-=1;
 
 	}
@@ -267,7 +267,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		axis->specializationConstants.scaleC.type = 32;
 		axis->specializationConstants.scaleC.data.d = app->configuration.scaleC;
 	}
-	axis->specializationConstants.upperBound = app->configuration.upperBound;
+	axis->specializationConstants.upperBanded = app->configuration.upperBanded;
 
 	axis->specializationConstants.inputOffset.type = 31;
 	axis->specializationConstants.inputOffset.data.i = 0;

@@ -2153,7 +2153,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			//configuration.JW_parallel = 1;
 			configuration.outputBufferStride[0] = configuration.size[0];
 			//configuration.performWorland = 1;
-			//configuration.upperBound = 1;
+			//configuration.upperBanded = 1;
 			configuration.offsetV = 2 * configuration.size[0];
 			//CUstream hStream;
 			//cudaStreamCreate(&hStream);
@@ -2231,7 +2231,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			int l = 1;// 2 * configuration.size[0];
 			double* buffer_input_matrix = (double*)malloc(bufferSolveSize);
 			double* buffer_input_matrix_gpu = (double*)malloc(bufferSolveSize);
-			if (configuration.upperBound != 1) {
+			if (configuration.upperBanded != 1) {
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
 					buffer_input_matrix[i] = 1;
 					buffer_input_matrix_gpu[i] = 1.0 / mu(i, -0.5, l - 0.5 + 1);;
@@ -2253,7 +2253,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 					//buffer_input_matrix_gpu[i] = 0;
 				}
 			}
-			if (configuration.upperBound != 1) {
+			if (configuration.upperBanded != 1) {
 				for (uint64_t i = 1; i < 1 * configuration.size[0]; i++) {
 					buffer_input_matrix[2 * configuration.size[0] + i] = nu(i, -0.5, l - 0.5 + 1);// / mu(i, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 					buffer_input_matrix_gpu[2 * configuration.size[0] + i - 1] = nu(i, -0.5, l - 0.5 + 1) / mu(i - 1, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
@@ -2392,7 +2392,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			double* ress2 = (double*)malloc(bufferSolveResSize);
 			
 			for (uint64_t j = 0; j < configuration.size[1]; j++) {
-				if (configuration.upperBound != 1) {
+				if (configuration.upperBanded != 1) {
 					ress2[configuration.size[0] - 1 + j * configuration.size[0]] = buffer_input_systems[configuration.size[0] - 1 + j * configuration.size[0]] / buffer_input_matrix[4 * configuration.size[0] - 1];// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 					//ress[configuration.size[0] - 1 + j * configuration.size[0]] = ress2[configuration.size[0] - 1 + j * configuration.size[0]];
 					//printf("%f\n", ress2[configuration.size[0] - 1 + j * configuration.size[0]]);
@@ -2456,7 +2456,7 @@ mpf_set(temp0, temp);
 			double* ress = (double*)malloc(bufferSolveResSize);
 			double* ress2 = (double*)malloc(bufferSolveResSize);
 			for (uint64_t j = 0; j < configuration.size[1]; j++) {
-				if (configuration.upperBound != 1) {
+				if (configuration.upperBanded != 1) {
 					ress2[configuration.size[0] - 1 + j * configuration.size[0]] = buffer_input_systems[configuration.size[0] - 1 + j * configuration.size[0]] / buffer_input_matrix[4 * configuration.size[0] - 1];// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 					ress[configuration.size[0] - 1 + j * configuration.size[0]] = ress2[configuration.size[0] - 1 + j * configuration.size[0]];
 					
@@ -2590,7 +2590,7 @@ mpf_set(temp0, temp);
 			num_iter = 1000;
 			//resFFT = performVulkanFFT(vkGPU, &app, &launchParams, 0, num_iter, &totTime2);
 			if (resFFT != PFSOLVE_SUCCESS) return resFFT;
-			/*if (configuration.upperBound != 1) {
+			/*if (configuration.upperBanded != 1) {
 				for (uint64_t i = 1; i < 1 * configuration.size[0]; i++) {
 					buffer_input_matrix[1 * configuration.size[0] + i] = nu(i, -0.5, l - 0.5 + 1);// / mu(i, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 				}
@@ -2664,7 +2664,7 @@ mpf_set(temp0, temp);
 						if (i < configuration.size[0] - 1)
 							resMUL += buffer_input_matrix[i + 2 * configuration.size[0]] * output_PfSolve[(i + j * configuration.size[0]) + 1];
 						*/
-						if (configuration.upperBound != 1) {
+						if (configuration.upperBanded != 1) {
 							resCPU += buffer_input_matrix[i + 3 * configuration.size[0]] * ress2[(i + j * configuration.size[0])];
 							if (i < configuration.size[0] - 1)
 								resCPU += buffer_input_matrix[i + 2 * configuration.size[0]+1] * ress2[(i + j * configuration.size[0]) + 1];
@@ -2674,7 +2674,7 @@ mpf_set(temp0, temp);
 								resCPU += buffer_input_matrix[i + 3 * configuration.size[0]-1] * ress2[(i + j * configuration.size[0]) - 1];
 							resCPU += buffer_input_matrix[i + 2 * configuration.size[0]] * ress2[(i + j * configuration.size[0])];
 						}
-						if (configuration.upperBound != 1) {
+						if (configuration.upperBanded != 1) {
 							resGPU += buffer_input_matrix[i + 3 * configuration.size[0]] * output_PfSolve[(i + j * configuration.size[0])];
 							if (i < configuration.size[0] - 1)
 								resGPU += buffer_input_matrix[i + 2 * configuration.size[0] + 1] * output_PfSolve[(i + j * configuration.size[0]) + 1];
@@ -2685,7 +2685,7 @@ mpf_set(temp0, temp);
 							resGPU += buffer_input_matrix[i + 2 * configuration.size[0]] * output_PfSolve[(i + j * configuration.size[0])];
 						}
 
-						/*if (configuration.upperBound != 1) {
+						/*if (configuration.upperBanded != 1) {
 							resMUL2_cu += buffer_input_matrix[i + 3 * configuration.size[0]] * output_cuFFT[(i + j * configuration.size[0])];
 							if (i < configuration.size[0] - 1)
 								resMUL2_cu += buffer_input_matrix[i + 2 * configuration.size[0] + 1] * output_cuFFT[(i + j * configuration.size[0]) + 1];

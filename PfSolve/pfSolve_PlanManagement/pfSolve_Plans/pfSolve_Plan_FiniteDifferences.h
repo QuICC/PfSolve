@@ -112,7 +112,7 @@ static inline PfSolveResult PfSolve_Plan_FiniteDifferences(PfSolveApplication* a
 	axisStride[4].type = 31;
 	axisStride[4].data.i = axisStride[3].data.i;
 
-	/*if ((axis->specializationConstants.inputStride[1] == axis->specializationConstants.M_size - 1) && (!axis->specializationConstants.upperBound)) {
+	/*if ((axis->specializationConstants.inputStride[1] == axis->specializationConstants.M_size - 1) && (!axis->specializationConstants.upperBanded)) {
 		axis->specializationConstants.M_size-=1;
 
 	}

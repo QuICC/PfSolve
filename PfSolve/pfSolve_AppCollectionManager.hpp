@@ -28,7 +28,7 @@
 
 typedef struct PfSolve_MapKey_JonesWorland {
 	int64_t size[2];
-	int64_t upperBound;
+	int64_t upperBanded;
 	int64_t outputBufferStride;
 	int64_t type;
 } ;
@@ -59,9 +59,9 @@ typedef struct PfSolve_AppLibrary{
 bool inline operator<(const PfSolve_MapKey_JonesWorland& l, const PfSolve_MapKey_JonesWorland& r) {
         return (l.size[0] < r.size[0]
 			|| (l.size[0] == r.size[0] && l.size[1] < r.size[1])
-			|| (l.size[0] == r.size[0] && l.size[1] == r.size[1] && l.upperBound < r.upperBound)
-			|| (l.size[0] == r.size[0] && l.size[1] == r.size[1] && l.upperBound == r.upperBound && l.outputBufferStride < r.outputBufferStride)
-			|| (l.size[0] == r.size[0] && l.size[1] == r.size[1] && l.upperBound == r.upperBound && l.outputBufferStride == r.outputBufferStride && l.type < r.type)
+			|| (l.size[0] == r.size[0] && l.size[1] == r.size[1] && l.upperBanded < r.upperBanded)
+			|| (l.size[0] == r.size[0] && l.size[1] == r.size[1] && l.upperBanded == r.upperBanded && l.outputBufferStride < r.outputBufferStride)
+			|| (l.size[0] == r.size[0] && l.size[1] == r.size[1] && l.upperBanded == r.upperBanded && l.outputBufferStride == r.outputBufferStride && l.type < r.type)
 			);
 };
 

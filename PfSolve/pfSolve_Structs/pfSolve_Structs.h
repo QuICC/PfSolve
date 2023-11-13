@@ -209,7 +209,7 @@ typedef struct {
 	uint64_t logicBlock[3]; // logic block per warp
 
 	
-	int upperBound;
+	int upperBanded;
 	int64_t M_size_pow2;
 
 	int jw_type;
@@ -894,7 +894,7 @@ typedef struct {
 	PfContainer* ud_copy;
 	PfContainer* md;
 	
-	int upperBound;
+	int upperBanded;
 	int md_zero;
 	int ud_zero;
 	int ld_zero;

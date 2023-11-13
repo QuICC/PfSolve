@@ -201,7 +201,7 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 		//PfDefine(sc, &sc->ld[i], name);
 		//PfSetToZero(sc, &sc->ld[i]);
 	}
-	if (!sc->upperBound) {
+	if (!sc->upperBanded) {
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			sc->ud_copy[i].type = 100 + sc->floatTypeCode;
 			PfAllocateContainerFlexible(sc, &sc->ud_copy[i], 50);
@@ -577,7 +577,7 @@ static inline void freeRegistersInitialization_compute_JW(PfSolveSpecializationC
 	for (int i = 0; i < sc->registers_per_thread; i++) {
 		PfDeallocateContainer(sc, &sc->ld[i]);
 	}
-	if (!sc->upperBound) {
+	if (!sc->upperBanded) {
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			PfDeallocateContainer(sc, &sc->ud_copy[i]);
 		}

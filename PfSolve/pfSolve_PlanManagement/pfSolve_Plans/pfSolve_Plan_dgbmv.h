@@ -288,7 +288,7 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 	//axis->specializationConstants.offsetM = app->configuration.offsetMV;
 	//axis->specializationConstants.offsetV = ((app->configuration.jw_type%10)!=2) ? app->configuration.offsetMV + 2 * axis->specializationConstants.inputStride[1] : app->configuration.offsetMV;
 
-	axis->specializationConstants.upperBound = app->configuration.upperBound;
+	axis->specializationConstants.upperBanded = app->configuration.upperBanded;
 
 	res = PfSolveConfigureDescriptors(app, plan, axis, 0, 0, 0);
 	if (res != PFSOLVE_SUCCESS) {
