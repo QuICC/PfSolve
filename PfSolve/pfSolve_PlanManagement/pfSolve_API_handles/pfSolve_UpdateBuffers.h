@@ -1555,7 +1555,7 @@ static inline PfSolveResult PfSolveUpdatePushConstants(PfSolveApplication* app, 
 	pushConsts->inputBufferStride = launchParamss->inputBufferStride;
 	pushConsts->outputBufferStride = launchParamss->outputBufferStride;
 
-	if (launchParamss->size_1 > 0) app->configuration.size[1] = launchParamss->size_1;
+	if (launchParamss->batchSize > 0) app->configuration.size[1] = launchParamss->batchSize;
 
 	return PFSOLVE_SUCCESS;
 }

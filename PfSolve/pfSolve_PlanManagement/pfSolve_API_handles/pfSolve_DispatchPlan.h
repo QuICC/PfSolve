@@ -89,42 +89,42 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.workGroupShift[2], sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 0)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_MSIZE)) {
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.M_size, sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 1)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OFFSETM)) {
 							temp = axis->pushConstants.offsetM;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 2)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OFFSETV)) {
 							temp = axis->pushConstants.offsetV;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 3)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 							temp = axis->pushConstants.offsetSolution;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 4)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.inputZeropad[0], sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.inputZeropad[1], sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 5)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.outputZeropad[0], sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.outputZeropad[1], sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 7)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_INPUTBUFFERSTRIDE)) {
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.inputBufferStride, sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 8)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OUTPUTBUFFERSTRIDE)) {
 							memcpy(&axis->pushConstants.data[offset], &axis->pushConstants.outputBufferStride, sizeof(uint64_t));
 							offset += sizeof(uint64_t);
 						}
@@ -146,27 +146,27 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 0)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_MSIZE)) {
 							temp = (uint32_t)axis->pushConstants.M_size;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 1)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OFFSETM)) {
 							temp = (uint32_t)axis->pushConstants.offsetM;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 2)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OFFSETV)) {
 							temp = (uint32_t)axis->pushConstants.offsetV;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 3)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 							temp = (uint32_t)axis->pushConstants.offsetSolution;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 4)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 							temp = (uint32_t)axis->pushConstants.inputZeropad[0];
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
@@ -174,7 +174,7 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 5)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 							temp = (uint32_t)axis->pushConstants.outputZeropad[0];
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
@@ -182,18 +182,18 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 7)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_INPUTBUFFERSTRIDE)) {
 							temp = (uint32_t)axis->pushConstants.inputBufferStride;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
-						if (axis->specializationConstants.jw_control_bitmask & (1 << 8)) {
+						if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_OUTPUTBUFFERSTRIDE)) {
 							temp = (uint32_t)axis->pushConstants.outputBufferStride;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(uint32_t));
 							offset += sizeof(uint32_t);
 						}
 					}
-					if (axis->specializationConstants.jw_control_bitmask & (1 << 6)) {
+					if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_SCALEC)) {
 						if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) {
 						    if((offset % (2*sizeof(double))) != 0) offset = ((offset / (2*sizeof(double)))+1)*(2*sizeof(double));
 							if((axis->pushConstants.structSize % (2*sizeof(double))) != 0) axis->pushConstants.structSize = ((axis->pushConstants.structSize / (2*sizeof(double)))+1)*(2*sizeof(double));

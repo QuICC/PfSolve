@@ -153,7 +153,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 	axisStride[0].type = 31;
 	axisStride[0].data.i = 1;
 
-	if (app->configuration.jw_control_bitmask & (1 << 7)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_INPUTBUFFERSTRIDE)) {
 		axisStride[1].type = 100 + axis->specializationConstants.uintTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axisStride[1], 50);
 		sprintf(axisStride[1].name, "inputBufferStride");
@@ -181,7 +181,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 	axisStride[0].data.i = 1;
 
 
-	if (app->configuration.jw_control_bitmask & (1 << 8)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_OUTPUTBUFFERSTRIDE)) {
 		axisStride[1].type = 100 + axis->specializationConstants.uintTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axisStride[1], 50);
 		sprintf(axisStride[1].name, "outputBufferStride");
@@ -202,7 +202,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 	axisStride[4].type = 31;
 	axisStride[4].data.i = axisStride[3].data.i;*/
 
-  if (app->configuration.jw_control_bitmask & (1 << 1)) {
+  if (app->configuration.jw_control_bitmask & (RUNTIME_OFFSETM)) {
 		axis->specializationConstants.offsetM.type = 100 + axis->specializationConstants.uintTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axis->specializationConstants.offsetM, 50);
 		sprintf(axis->specializationConstants.offsetM.name, "offsetM");
@@ -212,7 +212,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 		axis->specializationConstants.offsetM.type = 31;
 		axis->specializationConstants.offsetM.data.i = app->configuration.offsetM;
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 3)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 		axis->specializationConstants.offsetSolution.type = 100 + axis->specializationConstants.uintTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axis->specializationConstants.offsetSolution, 50);
 		sprintf(axis->specializationConstants.offsetSolution.name, "offsetSolution");
@@ -222,7 +222,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 		axis->specializationConstants.offsetSolution.type = 31;
 		axis->specializationConstants.offsetSolution.data.i = app->configuration.offsetSolution;
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 4)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 		axis->specializationConstants.inputZeropad[0].type = 100 + axis->specializationConstants.uintTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axis->specializationConstants.inputZeropad[0], 50);
 		sprintf(axis->specializationConstants.inputZeropad[0].name, "inputZeropad_0");
@@ -239,7 +239,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 		axis->specializationConstants.inputZeropad[1].data.i = app->configuration.inputZeropad[1];
 	}
 
-	if (app->configuration.jw_control_bitmask & (1 << 5)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 		axis->specializationConstants.outputZeropad[0].type = 100 + axis->specializationConstants.uintTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axis->specializationConstants.outputZeropad[0], 50);
 		sprintf(axis->specializationConstants.outputZeropad[0].name, "outputZeropad_0");
@@ -256,7 +256,7 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 		axis->specializationConstants.outputZeropad[1].data.i = app->configuration.outputZeropad[1];
 	}
 
-	if (app->configuration.jw_control_bitmask & (1 << 6)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_SCALEC)) {
 		axis->specializationConstants.scaleC.type = 100 + axis->specializationConstants.floatTypeCode;
 		PfAllocateContainerFlexible(&axis->specializationConstants, &axis->specializationConstants.scaleC, 50);
 		sprintf(axis->specializationConstants.scaleC.name, "scaleC");
@@ -336,28 +336,28 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 		deletePfSolve(app);
 		return res;
 	}
-  if (app->configuration.jw_control_bitmask & (1 << 1)) {
+  if (app->configuration.jw_control_bitmask & (RUNTIME_OFFSETM)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.offsetM);
 	}
 
-	if (app->configuration.jw_control_bitmask & (1 << 3)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.offsetSolution);
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 4)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.inputZeropad[0]);
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.inputZeropad[1]);
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 5)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.outputZeropad[0]);
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.outputZeropad[1]);
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 6)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_SCALEC)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.scaleC);
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 7)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_INPUTBUFFERSTRIDE)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.inputStride[1]);
 	}
-	if (app->configuration.jw_control_bitmask & (1 << 8)) {
+	if (app->configuration.jw_control_bitmask & (RUNTIME_OUTPUTBUFFERSTRIDE)) {
 		PfDeallocateContainer(&axis->specializationConstants, &axis->specializationConstants.outputStride[1]);
 	}
 	return res;

@@ -128,33 +128,33 @@ static inline void getPushConstantsSize_jw(PfSolveSpecializationConstantsLayout*
 	if (sc->performWorkGroupShift[2]) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 0)) {
+	if (sc->jw_control_bitmask & (RUNTIME_MSIZE)) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 1)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETM)) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 2)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETV)) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 3)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 4)) {
-		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
-		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
-	}
-	if (sc->jw_control_bitmask & (1 << 5)) {
+	if (sc->jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 7)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
+		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 8)) {
+	if (sc->jw_control_bitmask & (RUNTIME_INPUTBUFFERSTRIDE)) {
 		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
 	}
-	if (sc->jw_control_bitmask & (1 << 6)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OUTPUTBUFFERSTRIDE)) {
+		sc->pushConstantsStructSize += ((sc->uintTypeCode%100) / 10 == 0) ? sizeof(uint32_t) : sizeof(uint64_t);
+	}
+	if (sc->jw_control_bitmask & (RUNTIME_SCALEC)) {
 		switch ((sc->floatTypeCode % 100) / 10) {
 		case 0:
 			sc->pushConstantsStructSize += 2;
@@ -213,27 +213,27 @@ static inline void appendPushConstants_jw(PfSolveSpecializationConstantsLayout* 
 		sprintf(tempCopyStr, "consts.%s", sc->workGroupShiftZ.name);
 		sprintf(sc->workGroupShiftZ.name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 0)) {
+	if (sc->jw_control_bitmask & (RUNTIME_MSIZE)) {
 		appendPushConstant(sc, &sc->M_size);
 		sprintf(tempCopyStr, "consts.%s", sc->M_size.name);
 		sprintf(sc->M_size.name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 1)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETM)) {
 		appendPushConstant(sc, &sc->offsetM);
 		sprintf(tempCopyStr, "consts.%s", sc->offsetM.name);
 		sprintf(sc->offsetM.name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 2)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETV)) {
 		appendPushConstant(sc, &sc->offsetV);
 		sprintf(tempCopyStr, "consts.%s", sc->offsetV.name);
 		sprintf(sc->offsetV.name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 3)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 		appendPushConstant(sc, &sc->offsetSolution);
 		sprintf(tempCopyStr, "consts.%s", sc->offsetSolution.name);
 		sprintf(sc->offsetSolution.name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 4)) {
+	if (sc->jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 		appendPushConstant(sc, &sc->inputZeropad[0]);
 		appendPushConstant(sc, &sc->inputZeropad[1]);
 		sprintf(tempCopyStr, "consts.%s", sc->inputZeropad[0].name);
@@ -241,7 +241,7 @@ static inline void appendPushConstants_jw(PfSolveSpecializationConstantsLayout* 
 		sprintf(tempCopyStr, "consts.%s", sc->inputZeropad[1].name);
 		sprintf(sc->inputZeropad[1].name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 5)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 		appendPushConstant(sc, &sc->outputZeropad[0]);
 		appendPushConstant(sc, &sc->outputZeropad[1]);
 		sprintf(tempCopyStr, "consts.%s", sc->outputZeropad[0].name);
@@ -249,17 +249,17 @@ static inline void appendPushConstants_jw(PfSolveSpecializationConstantsLayout* 
 		sprintf(tempCopyStr, "consts.%s", sc->outputZeropad[1].name);
 		sprintf(sc->outputZeropad[1].name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 7)) {
+	if (sc->jw_control_bitmask & (RUNTIME_INPUTBUFFERSTRIDE)) {
 		appendPushConstant(sc, &sc->inputStride[1]);
 		sprintf(tempCopyStr, "consts.%s", sc->inputStride[1].name);
 		sprintf(sc->inputStride[1].name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 8)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OUTPUTBUFFERSTRIDE)) {
 		appendPushConstant(sc, &sc->outputStride[1]);
 		sprintf(tempCopyStr, "consts.%s", sc->outputStride[1].name);
 		sprintf(sc->outputStride[1].name, "%s", tempCopyStr);
 	}
-	if (sc->jw_control_bitmask & (1 << 6)) {
+	if (sc->jw_control_bitmask & (RUNTIME_SCALEC)) {
 		appendPushConstant(sc, &sc->scaleC);
 		sprintf(tempCopyStr, "consts.%s", sc->scaleC.name);
 		sprintf(sc->scaleC.name, "%s", tempCopyStr);

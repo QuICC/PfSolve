@@ -106,7 +106,7 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			int** y;
 			y = &x;
 			//configuration.aimThreads = 32;
-			configuration.jw_control_bitmask = (8+16+32+128+256);// (1 << 6);
+			configuration.jw_control_bitmask = (RUNTIME_OFFSETSOLUTION+RUNTIME_INPUTZEROPAD+RUNTIME_OUTPUTZEROPAD+RUNTIME_INPUTBUFFERSTRIDE+RUNTIME_OUTPUTBUFFERSTRIDE);// (RUNTIME_SCALEC);
 			//configuration.JW_sequential = 1;
 			//configuration.JW_parallel = 1;
 			configuration.outputBufferStride[0] = configuration.size[0];

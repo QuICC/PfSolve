@@ -70,6 +70,16 @@
 typedef struct PfContainer PfContainer;
 typedef union PfData PfData;
 
+#define RUNTIME_MSIZE 1
+#define RUNTIME_OFFSETM 2
+#define RUNTIME_OFFSETV 4
+#define RUNTIME_OFFSETSOLUTION 8
+#define RUNTIME_INPUTZEROPAD 16
+#define RUNTIME_OUTPUTZEROPAD 32
+#define RUNTIME_SCALEC 64
+#define RUNTIME_INPUTBUFFERSTRIDE 128
+#define RUNTIME_OUTPUTBUFFERSTRIDE 256
+
 typedef union PfData {
 	pfINT i; // int
 	pfLD d; // long double
@@ -401,17 +411,17 @@ typedef struct {
 	uint64_t outputBufferOffset;//specify if PfSolve has to offset the first element position inside the output buffer. In bytes. Default 0
 	uint64_t kernelOffset;//specify if PfSolve has to offset the first element position inside the kernel. In bytes. Default 0
 
-	uint64_t M_size;
-	uint64_t offsetM;
-	uint64_t offsetV;
-	uint64_t offsetSolution;
-	uint64_t inputZeropad[2]; //11
-	uint64_t outputZeropad[2]; //12
-	uint64_t inputBufferStride;
-	uint64_t outputBufferStride;
+	uint64_t M_size; // RUNTIME_MSIZE - not implemented 
+	uint64_t offsetM; // RUNTIME_OFFSETM
+	uint64_t offsetV; // RUNTIME_OFFSETV
+	uint64_t offsetSolution; // RUNTIME_OFFSETSOLUTION
+	uint64_t inputZeropad[2]; // RUNTIME_INPUTZEROPAD
+	uint64_t outputZeropad[2]; // RUNTIME_OUTPUTZEROPAD
+	long double scaleC; // RUNTIME_SCALEC
+	uint64_t inputBufferStride; // RUNTIME_INPUTBUFFERSTRIDE
+	uint64_t outputBufferStride; // RUNTIME_OUTPUTBUFFERSTRIDE
 
-	uint64_t size_1;
-	long double scaleC;
+	uint64_t batchSize;
 
 } PfSolveLaunchParams;//parameters specified at plan execution
 typedef enum PfSolveResult {

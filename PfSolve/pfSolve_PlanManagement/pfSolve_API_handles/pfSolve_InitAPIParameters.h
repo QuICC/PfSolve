@@ -620,27 +620,27 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 		PfAllocateContainerFlexible(sc, &sc->workGroupShiftZ, 50);
 		sprintf(sc->workGroupShiftZ.name, "workGroupShiftZ");
 	}
-	if (sc->jw_control_bitmask & (1 << 0)) {
+	if (sc->jw_control_bitmask & (RUNTIME_MSIZE)) {
 		sc->M_size.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->M_size, 50);
 		sprintf(sc->M_size.name, "M_size");
 	}
-	if (sc->jw_control_bitmask & (1 << 1)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETM)) {
 		sc->offsetM.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->offsetM, 50);
 		sprintf(sc->offsetM.name, "offsetM");
 	}
-	if (sc->jw_control_bitmask & (1 << 2)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETV)) {
 		sc->offsetV.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->offsetV, 50);
 		sprintf(sc->offsetV.name, "offsetV");
 	}
-	if (sc->jw_control_bitmask & (1 << 3)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 		sc->offsetSolution.type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->offsetSolution, 50);
 		sprintf(sc->offsetSolution.name, "offsetSolution");
 	}
-	if (sc->jw_control_bitmask & (1 << 4)) {
+	if (sc->jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 		sc->inputZeropad[0].type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->inputZeropad[0], 50);
 		sc->inputZeropad[1].type = 100 + sc->uintTypeCode;
@@ -648,7 +648,7 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 		sprintf(sc->inputZeropad[0].name, "inputZeropad0");
 		sprintf(sc->inputZeropad[1].name, "inputZeropad1");
 	}
-	if (sc->jw_control_bitmask & (1 << 5)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 		sc->outputZeropad[0].type = 100 + sc->uintTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->outputZeropad[0], 50);
 		sc->outputZeropad[1].type = 100 + sc->uintTypeCode;
@@ -656,7 +656,7 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 		sprintf(sc->outputZeropad[0].name, "outputZeropad0");
 		sprintf(sc->outputZeropad[1].name, "outputZeropad1");
 	}
-	if (sc->jw_control_bitmask & (1 << 6)) {
+	if (sc->jw_control_bitmask & (RUNTIME_SCALEC)) {
 		sc->scaleC.type = 100 + sc->floatTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->scaleC, 50);
 		sprintf(sc->scaleC.name, "scaleC");
@@ -1154,27 +1154,27 @@ static inline PfSolveResult freeParametersAPI_JW(PfSolveApplication* app, PfSolv
 	if (sc->performWorkGroupShift[2]) {
 		PfDeallocateContainer(sc, &sc->workGroupShiftZ);
 	}
-	if (sc->jw_control_bitmask & (1 << 0)) {
+	if (sc->jw_control_bitmask & (RUNTIME_MSIZE)) {
 		PfDeallocateContainer(sc, &sc->M_size);
 	}
-	if (sc->jw_control_bitmask & (1 << 1)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETM)) {
 		PfDeallocateContainer(sc, &sc->offsetM);
 	}
-	if (sc->jw_control_bitmask & (1 << 2)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETV)) {
 		PfDeallocateContainer(sc, &sc->offsetV);
 	}
-	if (sc->jw_control_bitmask & (1 << 3)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OFFSETSOLUTION)) {
 		PfDeallocateContainer(sc, &sc->offsetSolution);
 	}
-	if (sc->jw_control_bitmask & (1 << 4)) {
+	if (sc->jw_control_bitmask & (RUNTIME_INPUTZEROPAD)) {
 		PfDeallocateContainer(sc, &sc->inputZeropad[0]);
 		PfDeallocateContainer(sc, &sc->inputZeropad[1]);
 	}
-	if (sc->jw_control_bitmask & (1 << 5)) {
+	if (sc->jw_control_bitmask & (RUNTIME_OUTPUTZEROPAD)) {
 		PfDeallocateContainer(sc, &sc->outputZeropad[0]);
 		PfDeallocateContainer(sc, &sc->outputZeropad[1]);
 	}
-	if (sc->jw_control_bitmask & (1 << 6)) {
+	if (sc->jw_control_bitmask & (RUNTIME_SCALEC)) {
 		PfDeallocateContainer(sc, &sc->scaleC);
 	}
 	return sc->res;
