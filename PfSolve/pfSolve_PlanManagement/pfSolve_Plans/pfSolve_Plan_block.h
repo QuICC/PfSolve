@@ -307,10 +307,10 @@ app->localFFTPlan->numAxisUploads[0] = 1;
 		deletePfSolve(app);
 		return PFSOLVE_ERROR_MALLOC_FAILED;
 	}
-  #if(VKFFT_BACKEND==0)
-	sprintf(axis->PfSolveFunctionName, "main");
+#if(VKFFT_BACKEND==0)
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "main");
 #else
-	sprintf(axis->PfSolveFunctionName, "PfSolve_main");
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "%s", app->kernelName);
 #endif
 	
 	res = PfSolve_shaderGen_block(&axis->specializationConstants);

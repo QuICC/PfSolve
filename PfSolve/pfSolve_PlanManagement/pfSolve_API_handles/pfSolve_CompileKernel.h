@@ -450,7 +450,7 @@ static inline PfSolveResult PfSolve_CompileKernel(PfSolveApplication* app, PfSol
 		deletePfSolve(app);
 		return PFSOLVE_ERROR_FAILED_TO_LOAD_MODULE;
 	}
-	result2 = cuModuleGetFunction(&axis->PfSolveKernel, axis->PfSolveModule, axis->PfSolveFunctionName);
+	result2 = cuModuleGetFunction(&axis->PfSolveKernel, axis->PfSolveModule, axis->specializationConstants.PfSolveFunctionName);
 	if (result2 != CUDA_SUCCESS) {
 		printf("cuModuleGetFunction error: %d\n", result2);
 		free(code);
@@ -623,7 +623,7 @@ static inline PfSolveResult PfSolve_CompileKernel(PfSolveApplication* app, PfSol
 		deletePfSolve(app);
 		return PFSOLVE_ERROR_FAILED_TO_LOAD_MODULE;
 	}
-	result2 = hipModuleGetFunction(&axis->PfSolveKernel, axis->PfSolveModule, axis->PfSolveFunctionName);
+	result2 = hipModuleGetFunction(&axis->PfSolveKernel, axis->PfSolveModule, axis->specializationConstants.PfSolveFunctionName);
 	if (result2 != hipSuccess) {
 		printf("hipModuleGetFunction error: %d\n", result2);
 		free(code);
@@ -755,7 +755,7 @@ static inline PfSolveResult PfSolve_CompileKernel(PfSolveApplication* app, PfSol
 			return PFSOLVE_ERROR_FAILED_TO_COMPILE_PROGRAM;
 		}
 	}
-	axis->kernel = clCreateKernel(axis->program, axis->PfSolveFunctionName, &res);
+	axis->kernel = clCreateKernel(axis->program, axis->specializationConstants.PfSolveFunctionName, &res);
 	if (res != CL_SUCCESS) {
 		if (app->configuration.saveApplicationToString) {
 			free(axis->binary);
@@ -904,7 +904,7 @@ static inline PfSolveResult PfSolve_CompileKernel(PfSolveApplication* app, PfSol
 		ZE_STRUCTURE_TYPE_KERNEL_DESC,
 		0,
 		0, // flags
-		axis->PfSolveFunctionName
+		axis->specializationConstants.PfSolveFunctionName
 	};
 	res = zeKernelCreate(axis->PfSolveModule, &kernelDesc, &axis->PfSolveKernel);
 	if (res != ZE_RESULT_SUCCESS) {
@@ -959,7 +959,7 @@ static inline PfSolveResult PfSolve_CompileKernel(PfSolveApplication* app, PfSol
 		str->release();
 	}
 	//const char function_name[20] = "PfSolve_main_R2C";
-	NS::String* str = NS::String::string(axis->PfSolveFunctionName, NS::UTF8StringEncoding);
+	NS::String* str = NS::String::string(axis->specializationConstants.PfSolveFunctionName, NS::UTF8StringEncoding);
 	MTL::Function* function = axis->library->newFunction(str);
 	axis->pipeline = app->configuration.device->newComputePipelineState(function, &error);
 	function->release();

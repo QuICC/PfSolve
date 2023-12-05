@@ -232,9 +232,9 @@ static inline PfSolveResult PfSolve_Plan_FiniteDifferences(PfSolveApplication* a
 	//if (app->configuration.compute_flux_D)
 	//	res = PfSolve_shaderGen_compute_fluxD(&axis->specializationConstants);
 #if(VKFFT_BACKEND==0)
-	sprintf(axis->PfSolveFunctionName, "main");
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "main");
 #else
-	sprintf(axis->PfSolveFunctionName, "PfSolve_main");
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "%s", app->kernelName);
 #endif
 	res = PfSolve_shaderGen_compute_Pf(&axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {

@@ -1110,6 +1110,7 @@ typedef struct {
 	PfContainer BluesteinConvolutionKernelStruct;
 	PfContainer g_powStruct;
 
+	char PfSolveFunctionName[200];
 	//PfContainer cosDef;
 	//PfContainer sinDef;
 
@@ -1157,7 +1158,6 @@ typedef struct {
 	PfSolveSpecializationConstantsLayout specializationConstants;
 	PfSolvePushConstantsLayout pushConstants;
 	uint64_t updatePushConstants;
-	char PfSolveFunctionName[50];
 #if(VKFFT_BACKEND==0)
 	VkBuffer* inputBuffer;
 	VkBuffer* outputBuffer;
@@ -1246,7 +1246,7 @@ typedef struct {
 	PfSolveConfiguration configuration;
 	PfSolvePlan* localFFTPlan;
 	PfSolvePlan* localFFTPlan_inverse; //additional inverse plan
-
+	char kernelName[200];
 	uint64_t actualNumBatches;
 	uint64_t firstAxis;
 	uint64_t lastAxis;

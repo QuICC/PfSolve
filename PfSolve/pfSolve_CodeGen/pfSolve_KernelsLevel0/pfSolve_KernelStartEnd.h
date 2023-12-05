@@ -58,7 +58,7 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 	sc->tempLen = sprintf(sc->tempStr, "extern __shared__ float shared[];\n");
 	PfAppendLine(sc);
 	
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	switch (type) {
 	case 5:
@@ -142,7 +142,7 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 		);
 	}
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	switch (type) {
 	case 5:
@@ -192,7 +192,7 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	appendSharedMemoryPfSolve(sc, locType);
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void PfSolve_main ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void %s ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	switch (type) {
 	case 5:
@@ -252,7 +252,7 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	appendSharedMemoryPfSolve(sc, locType);
 #elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "kernel void PfSolve_main ");
+	sc->tempLen = sprintf(sc->tempStr, "kernel void %s ", sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	
 	sc->tempLen = sprintf(sc->tempStr, "(%s3 thread_position_in_grid [[thread_position_in_grid]], ", uintType->name);
@@ -509,7 +509,7 @@ static inline void appendKernelStart_compute_Pf(PfSolveSpecializationConstantsLa
 	//sc->tempLen = sprintf(sc->tempStr, "extern __shared__ float shared[];\n");
 	//res = PfAppendLine(sc);
 	//if (res != PFSOLVE_SUCCESS) return res;
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ __launch_bounds__(%" PRIi64 ") void PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ __launch_bounds__(%" PRIi64 ") void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, "(%s* Pf, %s* qDx, %s* qDy, %s* qDz", floatType->name, floatType->name, floatType->name, floatType->name);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* Pf, %s* qDx, %s* qDy, %s* qDz", floatType->name, floatType->name, floatType->name, floatType->name);
@@ -519,14 +519,14 @@ static inline void appendKernelStart_compute_Pf(PfSolveSpecializationConstantsLa
 #elif(VKFFT_BACKEND==2)
 	sc->tempLen = sprintf(sc->tempStr, "extern __shared__ float shared[];\n");
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIu64 ") __global__ void PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIu64 ") __global__ void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* Pf, %s* qDx, %s* qDy, %s* qDz", floatType->name, floatType->name, floatType->name, floatType->name);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 #elif(VKFFT_BACKEND==3)
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIu64 ", %" PRIu64 ", %" PRIu64 "))) void PfSolve_main ", sc->localSize[0], sc->localSize[1], sc->localSize[2]);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIu64 ", %" PRIu64 ", %" PRIu64 "))) void %s ", sc->localSize[0], sc->localSize[1], sc->localSize[2], sc->PfSolveFunctionName);
 	res = PfAppendLine(sc);
 	if (res != PFSOLVE_SUCCESS) return res;
 	sc->tempLen = sprintf(sc->tempStr, "(__global %s* inputs, __global %s* outputs", floatType->name, sc->dataTypeOutput);
@@ -576,7 +576,7 @@ static inline void appendKernelStart_solve(PfSolveSpecializationConstantsLayout*
 	sc->tempLen = sprintf(sc->tempStr, "extern __shared__ float shared[];\n");
 	PfAppendLine(sc);
 
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	switch (type) {
 	case 5:
@@ -660,7 +660,7 @@ static inline void appendKernelStart_solve(PfSolveSpecializationConstantsLayout*
 		);
 	}
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	switch (type) {
 	case 5:
@@ -710,7 +710,7 @@ static inline void appendKernelStart_solve(PfSolveSpecializationConstantsLayout*
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	appendSharedMemoryPfSolve(sc, locType);
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void PfSolve_main ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void %s ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	switch (type) {
 	case 5:
@@ -885,7 +885,7 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	PfAppendLine(sc);
 	}
 
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
@@ -928,7 +928,7 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 		);
 	}
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
@@ -937,7 +937,7 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	if (sc->usedSharedMemory.data.i) appendSharedMemoryPfSolve(sc, locType);
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void PfSolve_main ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void %s ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
@@ -946,7 +946,7 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	if (sc->usedSharedMemory.data.i) appendSharedMemoryPfSolve(sc, locType);
 #elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "kernel void PfSolve_main ");
+	sc->tempLen = sprintf(sc->tempStr, "kernel void %s ", sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 
 	sc->tempLen = sprintf(sc->tempStr, "(%s3 thread_position_in_grid [[thread_position_in_grid]], ", uintType->name);
@@ -1021,7 +1021,7 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	PfAppendLine(sc);
 	}
 
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", typeInputMemory->name, typeOutputMemory->name);
 	PfAppendLine(sc);
@@ -1064,7 +1064,7 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 		);
 	}
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void PfSolve_main ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", typeInputMemory->name, typeOutputMemory->name);
 	PfAppendLine(sc);
@@ -1073,7 +1073,7 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	if (sc->usedSharedMemory.data.i) appendSharedMemoryPfSolve(sc, locType);
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void PfSolve_main ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i);
+	sc->tempLen = sprintf(sc->tempStr, "__kernel __attribute__((reqd_work_group_size(%" PRIi64 ", %" PRIi64 ", %" PRIi64 "))) void %s ", sc->localSize[0].data.i, sc->localSize[1].data.i, sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
@@ -1082,7 +1082,7 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
 	if (sc->usedSharedMemory.data.i) appendSharedMemoryPfSolve(sc, locType);
 #elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "kernel void PfSolve_main ");
+	sc->tempLen = sprintf(sc->tempStr, "kernel void %s ", sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 
 	sc->tempLen = sprintf(sc->tempStr, "(%s3 thread_position_in_grid [[thread_position_in_grid]], ", uintType->name);

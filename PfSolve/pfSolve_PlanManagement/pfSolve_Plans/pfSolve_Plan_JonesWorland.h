@@ -351,9 +351,9 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		return PFSOLVE_ERROR_MALLOC_FAILED;
 	}
 #if(VKFFT_BACKEND==0)
-	sprintf(axis->PfSolveFunctionName, "main");
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "main");
 #else
-	sprintf(axis->PfSolveFunctionName, "PfSolve_main");
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "%s", app->kernelName);
 #endif
 	res = PfSolve_shaderGen_JonesWorlandMV(&axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {

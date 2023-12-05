@@ -331,10 +331,10 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 		deletePfSolve(app);
 		return PFSOLVE_ERROR_MALLOC_FAILED;
 	}
-	#if(VKFFT_BACKEND==0)
-	sprintf(axis->PfSolveFunctionName, "main");
+#if(VKFFT_BACKEND==0)
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "main");
 #else
-	sprintf(axis->PfSolveFunctionName, "PfSolve_main");
+	sprintf(axis->specializationConstants.PfSolveFunctionName, "%s", app->kernelName);
 #endif
 	res = PfSolve_shaderGen_dgbmv(&axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {

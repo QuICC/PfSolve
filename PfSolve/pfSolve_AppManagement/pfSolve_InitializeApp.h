@@ -1474,7 +1474,7 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	app->localFFTPlan = (PfSolvePlan*)calloc(1, sizeof(PfSolvePlan));
 	FILE* kernelCache;
 	uint64_t str_len;
-	char fname[200];
+	char fname[300];
 	int myrank = 10;
 	//MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
 
@@ -1483,14 +1483,16 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//}
 	if (!inputLaunchConfiguration.disableCaching) {
 		if (app->configuration.jw_type >= 10) {
-			sprintf(fname, "%s/PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask);
+			sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask);
 		}
 		if (app->configuration.block) {
-			sprintf(fname, "%s/PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
+			sprintf(app->kernelName, "PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
 		}
 		if (app->configuration.LDA) {
-			sprintf(fname, "%s/PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", PFSOLVE_KERNELS_DIR, app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
+			sprintf(app->kernelName, "PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
 		}
+		sprintf(fname, "%s/%s", PFSOLVE_KERNELS_DIR, app->kernelName);
+
 		kernelCache = fopen(fname, "rb");
 		if (kernelCache != 0) {
 			fseek(kernelCache, 0, SEEK_END);
