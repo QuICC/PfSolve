@@ -104,6 +104,10 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 		sc->tempLen = sprintf(sc->tempStr, ", %s* BluesteinMultiplication", vecType->name);
 		PfAppendLine(sc);
 	}
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -187,6 +191,10 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> BluesteinMultiplication", vecType->name);
 		PfAppendLine(sc);
 	}
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -246,6 +254,7 @@ static inline void appendKernelStart(PfSolveSpecializationConstantsLayout* sc, i
 	if (sc->pushConstantsStructSize > 0) {
 		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
 		PfAppendLine(sc);
+		args_id++;
 	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
@@ -371,6 +380,10 @@ static inline void appendKernelStart_R2C(PfSolveSpecializationConstantsLayout* s
 		sc->tempLen = sprintf(sc->tempStr, ", %s* twiddleLUT", vecType->name);
 		PfAppendLine(sc);
 	}
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -413,6 +426,10 @@ static inline void appendKernelStart_R2C(PfSolveSpecializationConstantsLayout* s
 	
 	if (sc->LUT) {
 		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> twiddleLUT", vecType->name);
+		PfAppendLine(sc);
+	}
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
 		PfAppendLine(sc);
 	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
@@ -514,6 +531,10 @@ static inline void appendKernelStart_compute_Pf(PfSolveSpecializationConstantsLa
 	//sc->tempLen = sprintf(sc->tempStr, "(%s* Pf, %s* qDx, %s* qDy, %s* qDz", floatType->name, floatType->name, floatType->name, floatType->name);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* Pf, %s* qDx, %s* qDy, %s* qDz", floatType->name, floatType->name, floatType->name, floatType->name);
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 #elif(VKFFT_BACKEND==2)
@@ -523,6 +544,10 @@ static inline void appendKernelStart_compute_Pf(PfSolveSpecializationConstantsLa
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* Pf, %s* qDx, %s* qDy, %s* qDz", floatType->name, floatType->name, floatType->name, floatType->name);
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 #elif(VKFFT_BACKEND==3)
@@ -532,9 +557,9 @@ static inline void appendKernelStart_compute_Pf(PfSolveSpecializationConstantsLa
 	sc->tempLen = sprintf(sc->tempStr, "(__global %s* inputs, __global %s* outputs", floatType->name, sc->dataTypeOutput);
 	res = PfAppendLine(sc);
 	if (res != PFSOLVE_SUCCESS) return res;
-	//sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
-	//res = PfAppendLine(sc);
-	//if (res != PFSOLVE_SUCCESS) return res;
+	sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+	res = PfAppendLine(sc);
+	if (res != PFSOLVE_SUCCESS) return res;
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	res = PfAppendLine(sc);
 	if (res != PFSOLVE_SUCCESS) return res;
@@ -622,6 +647,10 @@ static inline void appendKernelStart_solve(PfSolveSpecializationConstantsLayout*
 		sc->tempLen = sprintf(sc->tempStr, ", %s* BluesteinMultiplication", vecType->name);
 		PfAppendLine(sc);
 	}
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -703,6 +732,10 @@ static inline void appendKernelStart_solve(PfSolveSpecializationConstantsLayout*
 	}
 	if (sc->BluesteinPreMultiplication || sc->BluesteinPostMultiplication) {
 		sc->tempLen = sprintf(sc->tempStr, ", const Inputs<%s> BluesteinMultiplication", vecType->name);
+		PfAppendLine(sc);
+	}
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
 		PfAppendLine(sc);
 	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
@@ -889,7 +922,10 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
-
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -932,6 +968,10 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -941,6 +981,10 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -963,6 +1007,10 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 
@@ -1025,7 +1073,10 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", typeInputMemory->name, typeOutputMemory->name);
 	PfAppendLine(sc);
-
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -1068,6 +1119,10 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", typeInputMemory->name, typeOutputMemory->name);
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -1077,6 +1132,10 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 	//sc->tempLen = sprintf(sc->tempStr, ", const PushConsts consts) {\n");
@@ -1099,6 +1158,10 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	sc->tempLen = sprintf(sc->tempStr, "device %s* inputs[[buffer(0)]], device %s* outputs[[buffer(1)]]", floatTypeInputMemory->name, floatTypeOutputMemory->name);
 
 	PfAppendLine(sc);
+	if (sc->pushConstantsStructSize > 0) {
+		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
+		PfAppendLine(sc);
+	}
 	sc->tempLen = sprintf(sc->tempStr, ") {\n");
 	PfAppendLine(sc);
 
