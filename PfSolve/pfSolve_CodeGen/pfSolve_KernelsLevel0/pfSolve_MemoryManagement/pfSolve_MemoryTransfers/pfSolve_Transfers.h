@@ -213,6 +213,22 @@ static inline void appendGlobalToRegisters(PfSolveSpecializationConstantsLayout*
 	PfAppendLine(sc);
 	return;
 }
+static inline void appendGlobalToRegistersMultipleBuffers(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* bufferName, PfContainer* inoutID)
+{
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+	PfAppendLine(sc);
+	sc->tempLen = sprintf(sc->tempStr, " = ");
+	PfAppendLine(sc);
+	PfAppendConversionStart(sc, out, bufferName);
+	int dataSize = ((out->type % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
+	sc->tempLen = sprintf(sc->tempStr, "%s%d[%s]", bufferName->name, sc->inputBufferId, inoutID->name);
+	PfAppendLine(sc);
+	PfAppendConversionEnd(sc, out, bufferName);
+	sc->tempLen = sprintf(sc->tempStr, ";\n");
+	PfAppendLine(sc);
+	return;
+}
 static inline void appendGlobalToRegisters_x(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* bufferName, PfContainer* inoutID)
 {
 	if (sc->res != PFSOLVE_SUCCESS) return;

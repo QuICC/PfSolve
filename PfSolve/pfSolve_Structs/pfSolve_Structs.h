@@ -290,6 +290,9 @@ typedef struct {
 	uint64_t fixMinRaderPrimeFFT;//start FFT convolution version of Rader for radix primes from this number. Better than direct multiplication version for almost all primes (except small ones, like 17-23 on some GPUs). Must be bigger or equal to fixMinRaderPrimeMult. Deafult 29 on AMD and 17 on other GPUs. 
 	uint64_t fixMaxRaderPrimeFFT;//switch to Bluestein's algorithm for radix primes from this number. Switch may happen earlier if prime can't fit in shared memory. Default is 16384, which is bigger than most current GPU's shared memory.
 
+	int numConsecutiveJWIterations;
+	int useMultipleInputBuffers;
+
 	//optional zero padding control parameters: (default 0 if not stated otherwise)
 	uint64_t performZeropadding[3]; // don't read some data/perform computations if some input sequences are zeropadded for each axis (0 - off, 1 - on)
 	uint64_t fft_zeropad_left[3];//specify start boundary of zero block in the system for each axis
@@ -894,12 +897,15 @@ typedef struct {
 	PfContainer* ud_copy;
 	PfContainer* md;
 	
+	pfUINT inputBufferId;
+
 	int upperBanded;
 	int md_zero;
 	int ud_zero;
 	int ld_zero;
 	int num_threads;
-
+	int numConsecutiveJWIterations;
+	int useMultipleInputBuffers;
 	int64_t jw_control_bitmask;
 
 	PfContainer offset_md; //0

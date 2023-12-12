@@ -85,181 +85,182 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		sc->offset_res_global.type = 31;
 		sc->offset_res_global.data.i = sc->offsetSolution.data.i;
 	}
-	if (sc->performTriSolve == 2)
-	{
-		sc->upperBanded = !sc->upperBanded;
-	}
-	if (sc->upperBanded){
-		sc->ud_zero = 0;
-		sc->ld_zero = 1;
-		
-		sc->offset_ud.data.i = sc->M_size.data.i;
 
-		if (sc->offsetM.type > 100) {
-			sc->offset_md_global.type = 100 + sc->uintTypeCode;
-			PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-			sprintf(sc->offset_md_global.name, "offset_md_global");
-			PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
-
-			sc->offset_ud_global.type = 100 + sc->uintTypeCode;
-			PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
-			sprintf(sc->offset_ud_global.name, "offset_lud_global");
-			PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
-
-			PfAdd(sc, &sc->offset_md_global, &sc->offsetM, &sc->M_size);
-			PfMov(sc, &sc->offset_ud_global, &sc->offsetM);
-		}
-		else {
-			sc->offset_md_global.data.i = sc->offsetM.data.i;
-			sc->offset_ud_global.data.i = sc->offsetM.data.i + sc->M_size.data.i;
-		}
-	}
-	else{
-		sc->ud_zero = 1;
-		sc->ld_zero = 0;
-		sc->offset_ld.data.i = sc->M_size.data.i;
-
-		if (sc->offsetM.type > 100) {
-			sc->offset_md_global.type = 100 + sc->uintTypeCode;
-			PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-			sprintf(sc->offset_md_global.name, "offset_md_global");
-			PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
-
-			sc->offset_ld_global.type = 100 + sc->uintTypeCode;
-			PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
-			sprintf(sc->offset_ld_global.name, "offset_lud_global");
-			PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
-
-			PfAdd(sc, &sc->offset_ld_global, &sc->offsetM, &sc->M_size);
-			PfMov(sc, &sc->offset_md_global, &sc->offsetM);
-		}
-		else {
-			sc->offset_ld_global.data.i = sc->offsetM.data.i;
-			sc->offset_md_global.data.i = sc->offsetM.data.i + sc->M_size.data.i;
-		}
-		
-	}
-	if (sc->performTriSolve == 2)
-	{
-		sc->upperBanded = !sc->upperBanded;
-	}
-	//appendGlobalToShared_all(sc);
-	
-	
 	sc->readToRegisters = 1;
 	appendReadWrite_rd(sc, 0);
 
-	if (sc->performMatVecMul){
-		appendGlobalToRegisters_mat(sc);
-		//sc->read_SharedToRegisters = 0;
-		//sc->write_RegistersToShared=0;
-        if(sc->performTriSolve == 2)
-        {
-                sc->ud_zero = 1;
-                sc->ld_zero = 1;
-        }
-		appendMatVecMul(sc);
-		//sc->read_SharedToRegisters = 0;
-		//sc->write_RegistersToShared=0;
-	}
-	//appendBarrier(sc);
-	
-	if (sc->upperBanded) {
-		if (sc->offsetM.type > 100) {
-			PfDeallocateContainer(sc, &sc->offset_md_global);
-			PfDeallocateContainer(sc, &sc->offset_ud_global);
+	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
+		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
+		sc->inputBufferId = i;
+		if (sc->performTriSolve == 2)
+		{
+			sc->upperBanded = !sc->upperBanded;
 		}
-	}
-	else {
-		if (sc->offsetM.type > 100) {
-			PfDeallocateContainer(sc, &sc->offset_md_global);
-			PfDeallocateContainer(sc, &sc->offset_ld_global);
-		}
-	}
-	sc->offset_md_global.type = 31;
-	sc->offset_ud_global.type = 31;
-	sc->offset_ld_global.type = 31;
 
-	sc->offset_md.data.i = 0;
-	sc->offset_res.data.i = 2 * sc->M_size.data.i;
-	//sc->offset_res_global.data.i = sc->offsetSolution.data.i;
-	if (sc->upperBanded){
-		sc->ud_zero = 1;
-		sc->ld_zero = 0;
-		sc->offset_ld.data.i = sc->M_size.data.i;
+		sc->md_zero = 0;
+		if (sc->upperBanded) {
+			sc->ud_zero = 0;
+			sc->ld_zero = 1;
 
-		if (sc->offsetV.type > 100) {
-			/*PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-			sc->offset_md_global.type = 100 + sc->uintTypeCode;
-			sprintf(sc->offset_md_global.name, "offset_md_global");
-			if (sc->offsetM.type < 100)
-				PfDefine(sc, &sc->offset_md_global);*/
+			sc->offset_ud.data.i = sc->M_size.data.i;
 
-			sc->offset_ld_global.type = 100 + sc->uintTypeCode;
-			PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
-			sprintf(sc->offset_ld_global.name, "offset_lud_global");
-			if(sc->offsetM.type < 100)
-				PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
+			if (sc->offsetM.type > 100) {
+				sc->offset_md_global.type = 100 + sc->uintTypeCode;
+				PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
+				sprintf(sc->offset_md_global.name, "offset_md_global");
+				PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
 
-			//PfAdd(sc, &sc->offset_ld_global, &sc->offsetV, &sc->M_size);
-			PfMov(sc, &sc->offset_ld_global, &sc->offsetV);
-		}
-		else {
-			//sc->offset_ld_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
-			sc->offset_ld_global.data.i = sc->offsetV.data.i;
-		}
-	}
-	else{
-		sc->ud_zero = 0;
-		sc->ld_zero = 1;
-		sc->offset_ud.data.i = sc->M_size.data.i;
-
-		if (sc->offsetV.type > 100) {
-			/*PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-			sc->offset_md_global.type = 100 + sc->uintTypeCode;
-			sprintf(sc->offset_md_global.name, "offset_md_global");
-			if (sc->offsetM.type < 100)
-				PfDefine(sc, &sc->offset_md_global);*/
-
-			sc->offset_ud_global.type = 100 + sc->uintTypeCode;
-			PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
-			sprintf(sc->offset_ud_global.name, "offset_lud_global");
-			if (sc->offsetM.type < 100)
+				sc->offset_ud_global.type = 100 + sc->uintTypeCode;
+				PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
+				sprintf(sc->offset_ud_global.name, "offset_lud_global");
 				PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
 
-			//PfAdd(sc, &sc->offset_md_global, &sc->offsetV, &sc->M_size);
-			PfMov(sc, &sc->offset_ud_global, &sc->offsetV);
+				PfAdd(sc, &sc->offset_md_global, &sc->offsetM, &sc->M_size);
+				PfMov(sc, &sc->offset_ud_global, &sc->offsetM);
+			}
+			else {
+				sc->offset_md_global.data.i = 0;// sc->offsetM.data.i;
+				sc->offset_ud_global.data.i = sc->M_size.data.i;//  sc->offsetM.data.i + sc->M_size.data.i;
+			}
 		}
 		else {
-			//sc->offset_md_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
-			sc->offset_ud_global.data.i = sc->offsetV.data.i;
+			sc->ud_zero = 1;
+			sc->ld_zero = 0;
+			sc->offset_ld.data.i = sc->M_size.data.i;
+
+			if (sc->offsetM.type > 100) {
+				sc->offset_md_global.type = 100 + sc->uintTypeCode;
+				PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
+				sprintf(sc->offset_md_global.name, "offset_md_global");
+				PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
+
+				sc->offset_ld_global.type = 100 + sc->uintTypeCode;
+				PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
+				sprintf(sc->offset_ld_global.name, "offset_lud_global");
+				PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
+
+				PfAdd(sc, &sc->offset_ld_global, &sc->offsetM, &sc->M_size);
+				PfMov(sc, &sc->offset_md_global, &sc->offsetM);
+			}
+			else {
+				sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+				sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+			}
+
 		}
-	}
-	sc->md_zero = 1;
-	if (sc->performTriSolve){
-		if(sc->performTriSolve != 2)
-        {
+
+		if (sc->performTriSolve == 2)
+		{
+			sc->upperBanded = !sc->upperBanded;
+		}
+		//appendGlobalToShared_all(sc);
+
+		if (sc->performMatVecMul) {
 			appendGlobalToRegisters_mat(sc);
-        }
-		
-		//sc->read_SharedToRegisters = 0;
-		appendTridiagonalSolve(sc);
-		
-		//sc->read_SharedToRegisters = 0;
+			//sc->read_SharedToRegisters = 0;
+			//sc->write_RegistersToShared=0;
+			if (sc->performTriSolve == 2)
+			{
+				sc->ud_zero = 1;
+				sc->ld_zero = 1;
+			}
+			appendMatVecMul(sc);
+			//sc->read_SharedToRegisters = 0;
+			//sc->write_RegistersToShared=0;
+		}
+		//appendBarrier(sc);
+
+		if (sc->upperBanded) {
+			if (sc->offsetM.type > 100) {
+				PfDeallocateContainer(sc, &sc->offset_md_global);
+				PfDeallocateContainer(sc, &sc->offset_ud_global);
+			}
+		}
+		else {
+			if (sc->offsetM.type > 100) {
+				PfDeallocateContainer(sc, &sc->offset_md_global);
+				PfDeallocateContainer(sc, &sc->offset_ld_global);
+			}
+		}
+		sc->offset_md_global.type = 31;
+		sc->offset_ud_global.type = 31;
+		sc->offset_ld_global.type = 31;
+
+		sc->offset_md.data.i = 0;
+		sc->offset_res.data.i = 2 * sc->M_size.data.i;
+		//sc->offset_res_global.data.i = sc->offsetSolution.data.i;
+		if (sc->upperBanded) {
+			sc->ud_zero = 1;
+			sc->ld_zero = 0;
+			sc->offset_ld.data.i = sc->M_size.data.i;
+
+			if (sc->offsetV.type > 100) {
+				sc->offset_ld_global.type = 100 + sc->uintTypeCode;
+				PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
+				sprintf(sc->offset_ld_global.name, "offset_lud_global");
+				if (sc->offsetM.type < 100)
+					PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
+
+				PfMov(sc, &sc->offset_ld_global, &sc->offsetV);
+			}
+			else {
+				//sc->offset_ld_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
+				sc->offset_ld_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+			}
+		}
+		else {
+			sc->ud_zero = 0;
+			sc->ld_zero = 1;
+			sc->offset_ud.data.i = sc->M_size.data.i;
+
+			if (sc->offsetV.type > 100) {
+				/*PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
+				sc->offset_md_global.type = 100 + sc->uintTypeCode;
+				sprintf(sc->offset_md_global.name, "offset_md_global");
+				if (sc->offsetM.type < 100)
+					PfDefine(sc, &sc->offset_md_global);*/
+
+				sc->offset_ud_global.type = 100 + sc->uintTypeCode;
+				PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
+				sprintf(sc->offset_ud_global.name, "offset_lud_global");
+				if (sc->offsetM.type < 100)
+					PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
+
+				//PfAdd(sc, &sc->offset_md_global, &sc->offsetV, &sc->M_size);
+				PfMov(sc, &sc->offset_ud_global, &sc->offsetV);
+			}
+			else {
+				//sc->offset_md_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
+				sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+			}
+		}
+		sc->md_zero = 1;
+		if (sc->performTriSolve) {
+			if (sc->performTriSolve != 2)
+			{
+				appendGlobalToRegisters_mat(sc);
+			}
+
+			//sc->read_SharedToRegisters = 0;
+			appendTridiagonalSolve(sc);
+
+			//sc->read_SharedToRegisters = 0;
+		}
+
+		if (sc->upperBanded) {
+			if (sc->offsetV.type > 100) {
+				//PfDeallocateContainer(sc, &sc->offset_md_global);
+				PfDeallocateContainer(sc, &sc->offset_ld_global);
+			}
+		}
+		else {
+			if (sc->offsetV.type > 100) {
+				//PfDeallocateContainer(sc, &sc->offset_md_global);
+				PfDeallocateContainer(sc, &sc->offset_ud_global);
+			}
+		}
 	}
 
-	if (sc->upperBanded) {
-		if (sc->offsetV.type > 100) {
-			//PfDeallocateContainer(sc, &sc->offset_md_global);
-			PfDeallocateContainer(sc, &sc->offset_ld_global);
-		}
-	}
-	else {
-		if (sc->offsetV.type > 100) {
-			//PfDeallocateContainer(sc, &sc->offset_md_global);
-			PfDeallocateContainer(sc, &sc->offset_ud_global);
-		}
-	}
 	//int i =0;
 	//if((i==0)){
 	//							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);

@@ -1175,12 +1175,18 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 	app->configuration.s_dz = inputLaunchConfiguration.s_dz;
 	app->configuration.s_dt_D = inputLaunchConfiguration.s_dt_D;
 
+	app->configuration.useMultipleInputBuffers = inputLaunchConfiguration.useMultipleInputBuffers;
+	app->configuration.numConsecutiveJWIterations = inputLaunchConfiguration.numConsecutiveJWIterations;
+	if (app->configuration.numConsecutiveJWIterations == 0) app->configuration.numConsecutiveJWIterations = 1;
+	
 	app->configuration.offsetM = inputLaunchConfiguration.offsetM;
 	app->configuration.offsetV = inputLaunchConfiguration.offsetV;
 	app->configuration.offsetSolution = inputLaunchConfiguration.offsetSolution;
 	app->configuration.upperBanded = inputLaunchConfiguration.upperBanded;
 	app->configuration.M_size = inputLaunchConfiguration.size[0];
-	app->configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)app->configuration.M_size)));
+	int64_t tempM = app->configuration.M_size;
+	if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
+	app->configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)tempM)));
 	app->configuration.inputZeropad[0] = inputLaunchConfiguration.inputZeropad[0];
 	app->configuration.inputZeropad[1] = inputLaunchConfiguration.inputZeropad[1];
 	app->configuration.outputZeropad[0] = inputLaunchConfiguration.outputZeropad[0];
@@ -1483,7 +1489,7 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//}
 	if (!inputLaunchConfiguration.disableCaching) {
 		if (app->configuration.jw_type >= 10) {
-			sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask);
+			sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "_%d_%d", app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask, app->configuration.numConsecutiveJWIterations, app->configuration.useMultipleInputBuffers);
 		}
 		if (app->configuration.block) {
 			sprintf(app->kernelName, "PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);

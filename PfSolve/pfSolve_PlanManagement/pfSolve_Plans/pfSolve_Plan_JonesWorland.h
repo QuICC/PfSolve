@@ -96,7 +96,8 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.performTriSolve = ((app->configuration.jw_type%10)!=1) ? 1 : 0;
 	if((app->configuration.jw_type % 10) == 3) axis->specializationConstants.performTriSolve = 2;
 	
-
+	axis->specializationConstants.useMultipleInputBuffers = app->configuration.useMultipleInputBuffers;
+	axis->specializationConstants.numConsecutiveJWIterations = app->configuration.numConsecutiveJWIterations;
 	//axis->specializationConstants.GivensSteps = 1;
 	res = initMemoryParametersAPI(app, &axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {

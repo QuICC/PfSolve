@@ -195,15 +195,15 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 					}
 					if (axis->specializationConstants.jw_control_bitmask & (RUNTIME_SCALEC)) {
 						if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) {
-						    if((offset % (2*sizeof(double))) != 0) offset = ((offset / (2*sizeof(double)))+1)*(2*sizeof(double));
-							if((axis->pushConstants.structSize % (2*sizeof(double))) != 0) axis->pushConstants.structSize = ((axis->pushConstants.structSize / (2*sizeof(double)))+1)*(2*sizeof(double));
-							double temp[2] = {(double)axis->pushConstants.scaleC, 0};
+							if ((offset % (2 * sizeof(double))) != 0) offset = ((offset / (2 * sizeof(double))) + 1) * (2 * sizeof(double));
+							if ((axis->pushConstants.structSize % (2 * sizeof(double))) != 0) axis->pushConstants.structSize = ((axis->pushConstants.structSize / (2 * sizeof(double))) + 1) * (2 * sizeof(double));
+							double temp[2] = { (double)axis->pushConstants.scaleC, 0 };
 							memcpy(&axis->pushConstants.data[offset], &temp, 2 * sizeof(double));
 							offset += 2 * sizeof(double);
 						}
 						else if (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory) {
-						    if((offset % sizeof(double)) != 0) offset = ((offset / sizeof(double))+1)*sizeof(double);
-							if((axis->pushConstants.structSize % sizeof(double)) != 0) axis->pushConstants.structSize = ((axis->pushConstants.structSize / sizeof(double))+1)*sizeof(double);
+							if ((offset % sizeof(double)) != 0) offset = ((offset / sizeof(double)) + 1) * sizeof(double);
+							if ((axis->pushConstants.structSize % sizeof(double)) != 0) axis->pushConstants.structSize = ((axis->pushConstants.structSize / sizeof(double)) + 1) * sizeof(double);
 							double temp = (double)axis->pushConstants.scaleC;
 							memcpy(&axis->pushConstants.data[offset], &temp, sizeof(double));
 							offset += sizeof(double);
@@ -225,11 +225,21 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 				}
 				vkCmdDispatch(app->configuration.commandBuffer[0], (uint32_t)dispatchSize[0], (uint32_t)dispatchSize[1], (uint32_t)dispatchSize[2]);
 #elif(VKFFT_BACKEND==1)
-				void* args[10];
+				void* args[100];
 				CUresult result = CUDA_SUCCESS;
-				args[0] = axis->inputBuffer;
-				args[1] = axis->outputBuffer;
-				uint64_t args_id = 2;
+				uint64_t args_id = 0;
+				if (app->configuration.useMultipleInputBuffers){
+					for (int i = 0; i < app->configuration.useMultipleInputBuffers; i++) {
+						args[i] = &axis->inputBuffer[i];
+					}
+					args_id = app->configuration.useMultipleInputBuffers;
+				}
+				else {
+					args[0] = axis->inputBuffer;
+					args_id = 1;
+				}
+				args[args_id] = axis->outputBuffer;
+				args_id++;
 				if (axis->specializationConstants.convolutionStep) {
 					args[args_id] = app->configuration.kernel;
 					args_id++;
@@ -296,10 +306,20 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 				}
 #elif(VKFFT_BACKEND==2)
 				hipError_t result = hipSuccess;
-				void* args[10];
-				args[0] = axis->inputBuffer;
-				args[1] = axis->outputBuffer;
-				uint64_t args_id = 2;
+				void* args[100];
+				uint64_t args_id = 0;
+				if (app->configuration.useMultipleInputBuffers){
+					for (int i = 0; i < app->configuration.useMultipleInputBuffers; i++) {
+						args[i] = &axis->inputBuffer[i];
+					}
+					args_id = app->configuration.useMultipleInputBuffers;
+				}
+				else {
+					args[0] = axis->inputBuffer;
+					args_id = 1;
+				}
+				args[args_id] = axis->outputBuffer;
+				args_id++;
 				if (axis->specializationConstants.convolutionStep) {
 					args[args_id] = app->configuration.kernel;
 					args_id++;

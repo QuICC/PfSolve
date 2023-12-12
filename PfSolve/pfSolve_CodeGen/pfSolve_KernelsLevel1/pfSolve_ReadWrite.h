@@ -1545,7 +1545,11 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 		}
 		if (!sc->md_zero) {
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_md_global);
-			appendGlobalToRegisters(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
+			if(sc->useMultipleInputBuffers)
+				appendGlobalToRegistersMultipleBuffers(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
+			else
+				appendGlobalToRegisters(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
+
 		}
 		else
 		{
@@ -1560,7 +1564,10 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_ld_global);
 			temp_int.data.i = 1;
             //PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-			appendGlobalToRegisters(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
+			if(sc->useMultipleInputBuffers)
+				appendGlobalToRegistersMultipleBuffers(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
+			else
+				appendGlobalToRegisters(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
 		}
 		else {
 			//PfSetToZero(sc, &sc->ld[i]);//fix
@@ -1575,7 +1582,10 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_ud_global);
 			temp_int.data.i = 1;
             //PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-			appendGlobalToRegisters(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
+			if(sc->useMultipleInputBuffers)
+				appendGlobalToRegistersMultipleBuffers(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
+			else
+				appendGlobalToRegisters(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
 		}
 		else {
 			//PfSetToZero(sc, &sc->ud[i]);//fix

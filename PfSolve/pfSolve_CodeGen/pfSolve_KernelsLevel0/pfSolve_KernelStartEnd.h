@@ -920,8 +920,20 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 
 	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
-	PfAppendLine(sc);
+	if (sc->useMultipleInputBuffers) {
+		sc->tempLen = sprintf(sc->tempStr, "(%s* inputs0", floatTypeInputMemory->name);
+		PfAppendLine(sc);
+		for (int i = 1; i < sc->useMultipleInputBuffers; i++) {
+			sc->tempLen = sprintf(sc->tempStr, ", %s* inputs%d", floatTypeInputMemory->name, i);
+			PfAppendLine(sc);
+		}
+		sc->tempLen = sprintf(sc->tempStr, ", %s* outputs", floatTypeOutputMemory->name);
+		PfAppendLine(sc);
+	}
+	else {
+		sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
+		PfAppendLine(sc);
+	}
 	if (sc->pushConstantsStructSize > 0) {
 		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
 		PfAppendLine(sc);
@@ -966,8 +978,20 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	PfAppendLine(sc);
 	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __launch_bounds__(%" PRIi64 ") __global__ void %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
-	PfAppendLine(sc);
+	if (sc->useMultipleInputBuffers) {
+		sc->tempLen = sprintf(sc->tempStr, "(%s* inputs0", floatTypeInputMemory->name);
+		PfAppendLine(sc);
+		for (int i = 1; i < sc->useMultipleInputBuffers; i++) {
+			sc->tempLen = sprintf(sc->tempStr, ", %s* inputs%d", floatTypeInputMemory->name, i);
+			PfAppendLine(sc);
+		}
+		sc->tempLen = sprintf(sc->tempStr, ", %s* outputs", floatTypeOutputMemory->name);
+		PfAppendLine(sc);
+	}
+	else {
+		sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
+		PfAppendLine(sc);
+	}
 	if (sc->pushConstantsStructSize > 0) {
 		sc->tempLen = sprintf(sc->tempStr, ", PushConsts consts");
 		PfAppendLine(sc);

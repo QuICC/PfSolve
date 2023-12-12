@@ -1027,7 +1027,7 @@ PFSOLVE_STBSP__PUBLICDEF int PFSOLVE_STB_SPRINTF_DECORATE(vsprintfcb)(PFSOLVE_ST
             lead[1] = '0';
             lead[2] = h[0xb];
          }
-         l = (8 << 4) | (RUNTIME_OUTPUTBUFFERSTRIDE);
+         l = (8 << 4) | (1 << 8);
          goto radixnum;
 
       case 'o': // octal
