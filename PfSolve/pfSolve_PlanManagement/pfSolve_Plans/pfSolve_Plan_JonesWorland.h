@@ -123,8 +123,21 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		return res;
 	}
 
+	axis->specializationConstants.registers_per_thread = 1;
+	int numWarps = (uint64_t)ceil((app->configuration.M_size_pow2/ app->configuration.warpSize) / 4.0);
+	if ((numWarps * app->configuration.warpSize) > app->configuration.maxThreadsNum) numWarps = app->configuration.maxThreadsNum / app->configuration.warpSize;
+	axis->axisBlock[0] = app->configuration.M_size_pow2 / numWarps;
+	while (axis->axisBlock[0] > app->configuration.warpSize) {
+		axis->axisBlock[0] = (uint64_t)ceil(axis->axisBlock[0] / 2.0);
+		axis->specializationConstants.registers_per_thread *= 2;
+	}
+	axis->axisBlock[0] = numWarps * axis->specializationConstants.warpSize;// ((uint64_t)ceil(axis->axisBlock[0] / (double)axis->specializationConstants.warpSize))* axis->specializationConstants.warpSize;
+	axis->axisBlock[1] = 1;
+	axis->axisBlock[2] = 1;
+	axis->specializationConstants.num_threads = axis->axisBlock[0] * axis->axisBlock[1] * axis->axisBlock[2];
+
 	axis->specializationConstants.usedSharedMemory.type = 31;
-	axis->specializationConstants.usedSharedMemory.data.i = 0;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
+	axis->specializationConstants.usedSharedMemory.data.i = (axis->specializationConstants.num_threads == axis->specializationConstants.warpSize) ? 0 : (numWarps * (axis->specializationConstants.warpSize+1)) * axis->specializationConstants.registers_per_thread * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	//configure strides
 
 
@@ -310,17 +323,6 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		return PFSOLVE_ERROR_FAILED_TO_CREATE_PIPELINE_LAYOUT;
 	}
 #endif*/
-	axis->specializationConstants.registers_per_thread = 1;
-
-	axis->axisBlock[0] = app->configuration.M_size_pow2;
-	while (axis->axisBlock[0] > app->configuration.warpSize) {
-		axis->axisBlock[0] = (uint64_t)ceil(axis->axisBlock[0] / 2.0);
-		axis->specializationConstants.registers_per_thread *= 2;
-	}
-	axis->axisBlock[0] = axis->specializationConstants.warpSize;// ((uint64_t)ceil(axis->axisBlock[0] / (double)axis->specializationConstants.warpSize))* axis->specializationConstants.warpSize;
-	axis->axisBlock[1] = 1;
-	axis->axisBlock[2] = 1;
-	axis->specializationConstants.num_threads = axis->axisBlock[0] * axis->axisBlock[1] * axis->axisBlock[2];
 	uint64_t tempSize[3] = { (uint64_t)ceil((app->configuration.size[1] * app->configuration.size[2]) / (double)(axis->axisBlock[1])), 1, 1 };
 
 

@@ -1059,6 +1059,8 @@ typedef struct {
 	PfContainer batchID;
 	PfContainer stageInvocationID;
 	PfContainer blockInvocationID;
+	PfContainer warpInvocationID;
+	PfContainer warpID;
 	PfContainer temp;
 	PfContainer temp1;
 	PfContainer temp2;

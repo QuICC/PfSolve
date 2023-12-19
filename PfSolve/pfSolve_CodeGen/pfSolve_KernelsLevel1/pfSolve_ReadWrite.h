@@ -1528,7 +1528,6 @@ static inline void appendWriteDataPfSolve(PfSolveSpecializationConstantsLayout* 
 	return;
 }
 
-
 static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLayout* sc) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	PfContainer temp_int = {};
@@ -1536,11 +1535,17 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
 
-	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		temp_int.data.i = i * sc->num_threads;
-		PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
+	temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+	PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+	PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
 
-		if ((i + 1) * sc->num_threads > sc->M_size.data.i) {
+	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+		if (i > 0) {
+			temp_int.data.i = sc->warpSize;
+			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		}
+		
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
 		if (!sc->md_zero) {
@@ -1592,7 +1597,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			
 		}
 		
-		if ((i + 1) * sc->num_threads > sc->M_size.data.i) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
 			PfIf_end(sc);
 		}
 	}
@@ -1640,11 +1645,18 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 	temp_int1.type = 31;
 	PfContainer temp_double = {};
 	temp_double.type = 32;
+
+	temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+	PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+	PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		temp_int.data.i = i * sc->num_threads;
-		PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
+		if (i > 0) {
+			temp_int.data.i = sc->warpSize;
+			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		}
 		
-		if ((i + 1) * sc->num_threads > sc->M_size.data.i) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
 		int control_zp = 0;
@@ -1682,7 +1694,7 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 			}
 		}
 		if (control_zp) PfIf_end(sc);
-		if ((i + 1) * sc->num_threads > sc->M_size.data.i) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
 			PfIf_end(sc);
 		}
 	}

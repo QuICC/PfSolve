@@ -59,8 +59,9 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 	}*/
 	//int64_t maxPCRiteration = (int64_t)ceil(log2(sc->M_size_pow2.data.i));
 	//int64_t BSsystemSize = 0;// sc->M_size_pow2.data.i / sc->warpSize;
+	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
 	int64_t maxPCRiteration = (int64_t)ceil(log2(sc->warpSize)); //(int64_t)ceil(log2(sc->M_size_pow2.data.i));
-	int64_t BSsystemSize = sc->M_size_pow2.data.i / sc->warpSize;
+	int64_t maxBSiteration = sc->M_size_pow2.data.i / sc->num_threads;
 	int64_t stride = 1;
 	int64_t next_stride = 1;
     /* if(!sc->ud_zero)
@@ -106,9 +107,327 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfMov(sc, &sc->ud[i], &sc->ud_copy[i]);
 		}
 	}*/
+	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
+		next_stride = stride * 2;
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			/*if ((i == 0)) {
+							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
+							PfAppendLine(sc);
+							
+						}*/
+			//sc->tempLen = sprintf(sc->tempStr, "	{//if (acc_%" PRIi64 ">0){\n", i);
+			//PfAppendLine(sc);
+			//
+			if (!sc->ld_zero) {
+				PfMov(sc, &sc->temp, &sc->ld[i]);
+
+				if (i > 0) {
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+					PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
+					PfIf_else(sc);
+					PfMov(sc, &sc->ld_copy[i], &sc->ld[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+					PfIf_end(sc);
+				}
+				else {
+					PfMov(sc, &sc->ld_copy[i], &sc->ld[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+				}
+				PfSubgroupShuffleUpCyclic(sc, &sc->ld_copy[i], &sc->ld_copy[i], stride);
+
+				PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->rd_copy[i], stride);
+					
+				if (i == 0) {
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+					
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+                                        temp_int.data.i = sc->warpSize - stride;
+					PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+
+					appendRegistersToShared(sc, &sc->tempInt, &sc->rd[sc->registers_per_thread - 1]);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendRegistersToShared(sc, &sc->tempInt, &sc->ld[sc->registers_per_thread - 1]);
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+
+					temp_int.data.i = stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+					
+					temp_int.data.i = 0;
+					PfIf_gt_start(sc, &sc->warpID, &temp_int);
+
+					temp_int.data.i = 1;
+					PfSub(sc, &sc->tempInt, &sc->warpID, &temp_int);
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+
+					appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendSharedToRegisters(sc, &sc->ld_copy[i], &sc->tempInt);
+					PfIf_end(sc);
+
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+				}
+				temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+				temp_int.data.i = i * sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+
+				temp_int.data.i = stride;
+				PfIf_lt_start(sc, &sc->inoutID, &temp_int);
+				{
+				//temp_int.data.i = stride - i * sc->warpSize;
+				//if (temp_int.data.i > 0) {
+					PfSetToZero(sc, &sc->ld_copy[i]);
+					PfSetToZero(sc, &sc->temp);
+				}
+				PfIf_else(sc);
+				{
+					temp_int.data.i = next_stride;
+					PfIf_lt_start(sc, &sc->inoutID, &temp_int);
+					PfSetToZero(sc, &sc->ld_copy[i]);
+					PfIf_end(sc);
+				}
+				PfIf_end(sc);
+
+				PfMul(sc, &sc->ld_copy[i], &sc->ld_copy[i], &sc->temp, 0);
+				PfMovNeg(sc, &sc->ld_copy[i], &sc->ld_copy[i]);
+				PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
+					
+				if (!sc->ud_zero) {
+					PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp2);
+					//sc->tempLen = sprintf(sc->tempStr, "\n\
+		md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
+						
+				}
+				PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
+			}
+
+			if (!sc->ud_zero) {
+				PfMov(sc, &sc->temp, &sc->ud[i]);
+
+				if (i < (sc->registers_per_thread - 1)) {
+					temp_int.data.i = stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+					PfMov(sc, &sc->ud_copy[i], &sc->ud[i + 1]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
+					PfIf_else(sc);
+					PfMov(sc, &sc->ud_copy[i], &sc->ud[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+					PfIf_end(sc);
+				}
+				else {
+					PfMov(sc, &sc->ud_copy[i], &sc->ud[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+				}
+
+				PfSubgroupShuffleDownCyclic(sc, &sc->ud_copy[i], &sc->ud_copy[i], stride);
+				PfSubgroupShuffleDownCyclic(sc, &sc->temp1, &sc->rd_copy[i], stride);
+
+				if (i == (sc->registers_per_thread - 1)) {
+					temp_int.data.i = stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+
+					appendRegistersToShared(sc, &sc->tempInt, &sc->rd[0]);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendRegistersToShared(sc, &sc->tempInt, &sc->ud[0]);
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+					
+					temp_int.data.i = sc->num_threads/sc->warpSize - 1;
+					PfIf_lt_start(sc, &sc->warpID, &temp_int);
+
+					temp_int.data.i = 1;
+					PfAdd(sc, &sc->tempInt, &sc->warpID, &temp_int);
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+
+					temp_int.data.i = sc->warpSize - stride;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+					PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+
+					appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendSharedToRegisters(sc, &sc->ud_copy[i], &sc->tempInt);
+
+					PfIf_end(sc);
+
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+				}
+
+				temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+				temp_int.data.i = i * sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+
+				temp_int.data.i = sc->M_size.data.i - stride;
+				PfIf_ge_start(sc, &sc->inoutID, &temp_int);
+				{
+				//temp_int.data.i = stride - i * sc->warpSize;
+				//if (temp_int.data.i > 0) {
+					PfSetToZero(sc, &sc->ud_copy[i]);
+					PfSetToZero(sc, &sc->temp);
+				}
+				PfIf_else(sc);
+				{
+					temp_int.data.i = sc->M_size.data.i - next_stride;
+					PfIf_ge_start(sc, &sc->inoutID, &temp_int);
+					PfSetToZero(sc, &sc->ud_copy[i]);
+					PfIf_end(sc);
+				}
+				PfIf_end(sc);	
+					
+				PfMul(sc, &sc->ud_copy[i], &sc->ud_copy[i], &sc->temp, 0);
+				PfMovNeg(sc, &sc->ud_copy[i], &sc->ud_copy[i]);
+				PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
+
+				if (!sc->ld_zero) {
+					PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp2);
+					//sc->tempLen = sprintf(sc->tempStr, "\n\
+		md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
+
+				}
+				PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
+			}
+		}
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (!sc->ld_zero) {
+				PfMov(sc, &sc->ld[i], &sc->ld_copy[i]);
+			}
+			if (!sc->ud_zero) {
+				PfMov(sc, &sc->ud[i], &sc->ud_copy[i]);
+			}
+			PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
+		}
+		//appendBarrier(sc);
+		
+
+		stride = next_stride;
+		
+	}
+	/*for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+		PfPrintReg(sc, &sc->gl_LocalInvocationID_x, &sc->rd[i]);
+	}*/
+	if (maxSharedMemPCRIteration > 0) {
+		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (i > 0) {
+				temp_int.data.i = sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+			/*temp_int.data.i = sc->warpSize;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);*/
+
+			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+		}
+		appendBarrierPfSolve(sc);
+
+		temp_int.data.i = sc->num_threads / sc->warpSize;
+		PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (i > 0) {
+				temp_int.data.i = sc->num_threads;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+			/*temp_int.data.i = sc->warpSize;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);*/
+
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+		}
+		appendBarrierPfSolve(sc);
+
+		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (i > 0) {
+				temp_int.data.i = sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+			/*temp_int.data.i = sc->warpSize;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);*/
+
+			if (!sc->ld_zero) {
+				appendRegistersToShared(sc, &sc->inoutID, &sc->ld[i]);
+			}
+			if (!sc->ud_zero) {
+				appendRegistersToShared(sc, &sc->inoutID, &sc->ud[i]);
+			}
+		}
+		appendBarrierPfSolve(sc);
+
+		temp_int.data.i = sc->num_threads / sc->warpSize;
+		PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (i > 0) {
+				temp_int.data.i = sc->num_threads;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+			/*temp_int.data.i = sc->warpSize;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);*/
+
+			if (!sc->ld_zero) {
+				appendSharedToRegisters(sc, &sc->ld[i], &sc->inoutID);
+			}
+			if (!sc->ud_zero) {
+				appendSharedToRegisters(sc, &sc->ud[i], &sc->inoutID);
+			}
+		}
+		appendBarrierPfSolve(sc);
+	}
+	stride = 1;
+	next_stride = 1;
 	for (int64_t PCRiteration = 0; PCRiteration < maxPCRiteration; PCRiteration++) {
 		next_stride = stride * 2;
 		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			//if (PCRiteration == 1) PfPrintReg(sc, &sc->gl_LocalInvocationID_x, &sc->rd[i]);
 			/*if ((i == 0)) {
 							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
 							PfAppendLine(sc);
@@ -131,7 +450,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 							}else{
 								if (temp_int.data.i < 0) 
 									temp_int.data.i = 0;
-								PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+								PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
 								PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
 								PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
 								PfIf_else(sc);
@@ -173,7 +492,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 							PfSetToZero(sc, &sc->temp);
 						}
 						else {
-							PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+							PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 							PfSetToZero(sc, &sc->ld_copy[i]);
 							PfSetToZero(sc, &sc->temp);
 							PfIf_else(sc);
@@ -182,7 +501,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 								PfSetToZero(sc, &sc->ld_copy[i]);
 							}else{
 								if (temp_int.data.i > 0) {
-									PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+									PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 									PfSetToZero(sc, &sc->ld_copy[i]);
 									if (!sc->ud_zero) {
 										//sc->tempLen = sprintf(sc->tempStr, "\n\
@@ -203,7 +522,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 							}
 							else{
 								if (temp_int.data.i > 0) {
-									PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+									PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 									PfSetToZero(sc, &sc->ld_copy[i]);
 									if (!sc->ud_zero) {
 										//sc->tempLen = sprintf(sc->tempStr, "\n\
@@ -269,7 +588,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 					if ((stride < sc->warpSize)) {
 						if ((sc->registers_per_thread > 1) && (i < sc->registers_per_thread - 1)) {
 							temp_int.data.i = stride;
-							PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+							PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 							PfMov(sc, &sc->ud_copy[i], &sc->ud[i + 1]);
 							PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
 							PfIf_else(sc);
@@ -307,14 +626,14 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 					temp_int.data.i = sc->M_size.data.i - stride - i * sc->num_threads;
 					if (sc->warpSize > temp_int.data.i) {
 						if (temp_int.data.i > 0) {
-							PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+							PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
 							PfSetToZero(sc, &sc->ud_copy[i]);
 							PfSetToZero(sc, &sc->temp);
 							temp_int.data.i = sc->M_size.data.i - next_stride - i * sc->num_threads;
 							if (sc->warpSize > temp_int.data.i) {
 								PfIf_else(sc);
 								if (temp_int.data.i > 0) {
-									PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+									PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
 									PfSetToZero(sc, &sc->ud_copy[i]);
 									PfIf_end(sc);
 								}else{
@@ -392,24 +711,63 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 		
 	}
 
-	for (int64_t i = 1; i < BSsystemSize; i++) {
+	for (int64_t BSiteration = 1; BSiteration < maxBSiteration; BSiteration++) {
 		if (!sc->ld_zero) {
-			PfMul(sc, &sc->temp, &sc->ld[i], &sc->rd[i-1], 0);
-			PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
+			PfMul(sc, &sc->temp, &sc->ld[BSiteration], &sc->rd[BSiteration-1], 0);
+			PfSub(sc, &sc->rd[BSiteration], &sc->rd[BSiteration], &sc->temp);
 		}
 		if (!sc->ud_zero) {
-			PfMul(sc, &sc->temp, &sc->ud[BSsystemSize-i- 1], &sc->rd[BSsystemSize-i], 0);
-			PfSub(sc, &sc->rd[BSsystemSize-i -1], &sc->rd[BSsystemSize-i -1], &sc->temp);
+			PfMul(sc, &sc->temp, &sc->ud[maxBSiteration-BSiteration- 1], &sc->rd[maxBSiteration-BSiteration], 0);
+			PfSub(sc, &sc->rd[maxBSiteration-BSiteration -1], &sc->rd[maxBSiteration-BSiteration -1], &sc->temp);
 		}
 	}
-	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type > 100)) {
-			temp_int.data.i = 0;
-			PfIf_eq_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-			//sc->tempLen = sprintf(sc->tempStr, "	if (%s == 0 ) res_%" PRIu64 " *= %s%s;\n", sc->gl_LocalInvocationID_x, 0, sc->scaleC.x_str, sc->LFending);
-			PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->scaleC, 0);
-			PfIf_end(sc);
+
+	if (maxSharedMemPCRIteration > 0) {
+		temp_int.data.i = sc->num_threads / sc->warpSize;
+		PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (i > 0) {
+				temp_int.data.i = sc->num_threads;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+			/*temp_int.data.i = sc->warpSize;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);*/
+
+			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
 		}
+		appendBarrierPfSolve(sc);
+
+		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			if (i > 0) {
+				temp_int.data.i = sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+			/*temp_int.data.i = sc->warpSize;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);*/
+
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+		}
+		appendBarrierPfSolve(sc);
+	}
+
+	if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type > 100)) {
+		temp_int.data.i = 0;
+		PfIf_eq_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+		//sc->tempLen = sprintf(sc->tempStr, "	if (%s == 0 ) res_%" PRIu64 " *= %s%s;\n", sc->gl_LocalInvocationID_x, 0, sc->scaleC.x_str, sc->LFending);
+		PfMul(sc, &sc->rd[0], &sc->rd[0], &sc->scaleC, 0);
+		PfIf_end(sc);
 	}
 	/*for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		//sc->tempLen = sprintf(sc->tempStr, "	if (acc_%" PRIi64 ">0){\n", i);

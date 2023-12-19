@@ -1487,16 +1487,16 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//if (app->configuration.compute_flux_D) {
 	//	sprintf(fname, "compute_flux_D_size_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "_logicblock_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.size[2], app->configuration.logicBlock[0], app->configuration.logicBlock[1], app->configuration.logicBlock[2]);
 	//}
+	if (app->configuration.jw_type >= 10) {
+		sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "_%d_%d", app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask, app->configuration.numConsecutiveJWIterations, app->configuration.useMultipleInputBuffers);
+	}
+	if (app->configuration.block) {
+		sprintf(app->kernelName, "PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
+	}
+	if (app->configuration.LDA) {
+		sprintf(app->kernelName, "PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
+	}
 	if (!inputLaunchConfiguration.disableCaching) {
-		if (app->configuration.jw_type >= 10) {
-			sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%d_%d_%" PRIi64 "_%d_%d", app->configuration.size[0], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask, app->configuration.numConsecutiveJWIterations, app->configuration.useMultipleInputBuffers);
-		}
-		if (app->configuration.block) {
-			sprintf(app->kernelName, "PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
-		}
-		if (app->configuration.LDA) {
-			sprintf(app->kernelName, "PfSolve_JW_dgbmv_%" PRIu64 "_%" PRIu64 "_%d_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.LDA, app->configuration.KU, app->configuration.KL, app->configuration.jw_control_bitmask);
-		}
 		sprintf(fname, "%s/%s", PFSOLVE_KERNELS_DIR, app->kernelName);
 
 		kernelCache = fopen(fname, "rb");

@@ -48,78 +48,199 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 		
 	}*/
 	//appendBarrier(sc);
-	
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
-		
-		*/
-		if (i * sc->num_threads < sc->M_size.data.i){
-			if (!sc->ud_zero) {
-				if ((sc->registers_per_thread > 1) && (i < sc->registers_per_thread-1)) {
-					temp_int.data.i = 1;
-					PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
-					PfIf_else(sc);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
-					PfIf_end(sc);
+		//PfPrintReg(sc, &sc->gl_LocalInvocationID_x, &sc->temp1);
+	}
+	if (sc->warpSize * sc->registers_per_thread != sc->M_size_pow2.data.i){
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 
-					PfSubgroupShuffleDownCyclic(sc, &sc->temp, &sc->rd_copy[i], 1);
-				}
-				else {
-					PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i], 1);
-				}
-			}
-			if (!sc->ld_zero) {
+			*/
 
-				if ((sc->registers_per_thread > 1) && (i > 0)) {
-					temp_int.data.i = sc->warpSize - 1;
-					PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
-					PfIf_else(sc);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
-					PfIf_end(sc);
-
-					PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->rd_copy[i], 1);
-				}
-				else {
-					PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i], 1);
-				}
-			}
-			PfMul(sc, &sc->rd_copy[i], &sc->rd[i], &sc->md[i], 0);
-			if (!sc->ud_zero){
-				temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
-				if (temp_int.data.i > 0){
-					if(temp_int.data.i < sc->localSize[0].data.i){
-						PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+			if (i * sc->num_threads < sc->M_size.data.i){
+				if (!sc->ud_zero) {
+					if (i < sc->registers_per_thread-1) {
+						temp_int.data.i = 1;
+						PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
+						PfIf_else(sc);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+						PfIf_end(sc);
 					}
-						PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
-						PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp);
-					//	sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ud_%" PRIu64 " * temp_0;\n", i, i);
-					
-					if(temp_int.data.i < sc->localSize[0].data.i){
+					else {
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+					}
+					PfSubgroupShuffleDownCyclic(sc, &sc->temp, &sc->rd_copy[i], 1);
+					if (i == sc->registers_per_thread-1) {
+						temp_int.data.i = 0;
+						PfIf_eq_start(sc, &sc->warpInvocationID, &temp_int);
+						appendRegistersToShared(sc, &sc->warpID, &sc->rd[0]);
+						PfIf_end(sc);
+
+						appendBarrierPfSolve(sc);
+						
+						temp_int.data.i = sc->warpSize - 1;
+						PfIf_eq_start(sc, &sc->warpInvocationID, &temp_int);
+
+						temp_int.data.i = sc->num_threads/sc->warpSize - 1;
+						PfIf_lt_start(sc, &sc->warpID, &temp_int);
+						temp_int.data.i = 1;
+						PfAdd(sc, &sc->tempInt, &sc->warpID, &temp_int);
+						appendSharedToRegisters(sc, &sc->temp, &sc->tempInt);
+						PfIf_end(sc);
+
+						PfIf_end(sc);
+
+						appendBarrierPfSolve(sc);
+					}
+				}
+				if (!sc->ld_zero) {
+					if (i > 0) {
+						temp_int.data.i = sc->warpSize - 1;
+						PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
+						PfIf_else(sc);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+						PfIf_end(sc);
+					}
+					else {
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+					}
+					PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->rd_copy[i], 1);
+					if (i == 0) {
+						temp_int.data.i = sc->warpSize - 1;
+						PfIf_eq_start(sc, &sc->warpInvocationID, &temp_int);
+						appendRegistersToShared(sc, &sc->warpID, &sc->rd[sc->registers_per_thread-1]);
+						PfIf_end(sc);
+
+						appendBarrierPfSolve(sc);
+						
+						temp_int.data.i = 0;
+						PfIf_eq_start(sc, &sc->warpInvocationID, &temp_int);
+						
+						temp_int.data.i = 0;
+						PfIf_gt_start(sc, &sc->warpID, &temp_int);
+						temp_int.data.i = 1;
+						PfSub(sc, &sc->tempInt, &sc->warpID, &temp_int);
+						appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
 						PfIf_end(sc);
 						
+						PfIf_end(sc);
+
+						appendBarrierPfSolve(sc);
 					}
-				}
-			}
-			if (!sc->ld_zero){
-				if(i==0){
-					temp_int.data.i = 0;
-					PfIf_gt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 					
 				}
+				PfMul(sc, &sc->rd_copy[i], &sc->rd[i], &sc->md[i], 0);
+				if (!sc->ud_zero) {
+					temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+					PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+					temp_int.data.i = i * sc->warpSize;
+					PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+
+					temp_int.data.i = sc->M_size.data.i - 1;
+					PfIf_lt_start(sc, &sc->inoutID, &temp_int);
+					PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
+					PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp);
+					//	sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ud_%" PRIu64 " * temp_0;\n", i, i);
+					PfIf_end(sc);
+				}
+				if (!sc->ld_zero) {
+					temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+					PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+					temp_int.data.i = i * sc->warpSize;
+					PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+
+					temp_int.data.i = 0;
+					PfIf_gt_start(sc, &sc->inoutID, &temp_int);
+					PfMul(sc, &sc->temp1, &sc->temp1, &sc->ld[i], 0);
+					PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp1);
+					PfIf_end(sc);
+
+				}
+			}
+			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
+
+			*/
+		}
+	}
+	else {
+		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
+
+			*/
+
+			if (i * sc->num_threads < sc->M_size.data.i){
+				if (!sc->ud_zero) {
+					if ((sc->registers_per_thread > 1) && (i < sc->registers_per_thread - 1)) {
+						temp_int.data.i = 1;
+						PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
+						PfIf_else(sc);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+						PfIf_end(sc);
+
+						PfSubgroupShuffleDownCyclic(sc, &sc->temp, &sc->rd_copy[i], 1);
+					}
+					else {
+						PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i], 1);
+					}
+				}
+				if (!sc->ld_zero) {
+
+					if ((sc->registers_per_thread > 1) && (i > 0)) {
+						temp_int.data.i = sc->warpSize - 1;
+						PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
+						PfIf_else(sc);
+						PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+						PfIf_end(sc);
+
+						PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->rd_copy[i], 1);
+					}
+					else {
+						PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i], 1);
+					}
+				}
+				PfMul(sc, &sc->rd_copy[i], &sc->rd[i], &sc->md[i], 0);
+				if (!sc->ud_zero) {
+					temp_int.data.i = sc->M_size.data.i - 1 - i * sc->num_threads;
+					if (temp_int.data.i > 0) {
+						if (temp_int.data.i < sc->localSize[0].data.i) {
+							PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+						}
+						PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
+						PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp);
+						//	sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ud_%" PRIu64 " * temp_0;\n", i, i);
+
+						if (temp_int.data.i < sc->localSize[0].data.i) {
+							PfIf_end(sc);
+
+						}
+					}
+				}
+				if (!sc->ld_zero) {
+					if (i == 0) {
+						temp_int.data.i = 0;
+						PfIf_gt_start(sc, &sc->warpInvocationID, &temp_int);
+
+					}
 					//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ld_%" PRIu64 " * temp_1;\n", i, i);
 					PfMul(sc, &sc->temp1, &sc->temp1, &sc->ld[i], 0);
 					PfAdd(sc, &sc->rd_copy[i], &sc->rd_copy[i], &sc->temp1);
-				
-				if(i==0){
-					PfIf_end(sc);
+
+					if (i == 0) {
+						PfIf_end(sc);
+					}
+
 				}
 			}
+			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
+
+			*/
 		}
-		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
-		
-		*/
 	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);

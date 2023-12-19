@@ -252,6 +252,20 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 	PfDefine(sc, &sc->tempInt, name);
 	PfSetToZero(sc, &sc->tempInt);
 
+	sc->warpInvocationID.type = 100 + sc->uintTypeCode;
+	PfAllocateContainerFlexible(sc, &sc->warpInvocationID, 50);
+	sprintf(name, "warpInvocationID");
+	PfDefine(sc, &sc->warpInvocationID, name);
+	temp_int.data.i = sc->warpSize;
+	PfMod(sc, &sc->warpInvocationID, &sc->gl_LocalInvocationID_x, &temp_int);
+
+	sc->warpID.type = 100 + sc->uintTypeCode;
+	PfAllocateContainerFlexible(sc, &sc->warpID, 50);
+	sprintf(name, "warpID");
+	PfDefine(sc, &sc->warpID, name);
+	temp_int.data.i = sc->warpSize;
+	PfDiv(sc, &sc->warpID, &sc->gl_LocalInvocationID_x, &temp_int);
+
     if (((sc->floatTypeCode % 100) / 10) == 3) {
 		sc->tempQuad.type = 100 + sc->floatTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->tempQuad, 50);
