@@ -1534,11 +1534,14 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 	temp_int.type = 31;
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
-
-	temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-	PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-	PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-
+	if (sc->warpSize != sc->num_threads) {
+		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+	}
+	else {
+		PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
+	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		if (i > 0) {
 			temp_int.data.i = sc->warpSize;
@@ -1646,10 +1649,14 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 	PfContainer temp_double = {};
 	temp_double.type = 32;
 
-	temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-	PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-	PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-
+	if (sc->warpSize != sc->num_threads) {
+		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+	}
+	else {
+		PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
+	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		if (i > 0) {
 			temp_int.data.i = sc->warpSize;
