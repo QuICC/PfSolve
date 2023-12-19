@@ -1534,7 +1534,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 	temp_int.type = 31;
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
-	if (sc->warpSize != sc->num_threads) {
+	if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
 		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
@@ -1649,7 +1649,7 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 	PfContainer temp_double = {};
 	temp_double.type = 32;
 
-	if (sc->warpSize != sc->num_threads) {
+	if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
 		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
