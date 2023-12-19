@@ -51,7 +51,7 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		//PfPrintReg(sc, &sc->gl_LocalInvocationID_x, &sc->temp1);
 	}
-	if (sc->warpSize * sc->registers_per_thread != sc->M_size_pow2.data.i){
+	if (sc->num_threads != sc->warpSize){
 		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 
