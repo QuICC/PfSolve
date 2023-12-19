@@ -1673,13 +1673,13 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 
 		//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " = %s%s[inoutID + %s*%" PRIu64 "+%" PRIu64 "]%s;\n", i, sc->convTypeLeftInput, sc->inputsStructRes, sc->gl_WorkGroupID_x, sc->outputStride[2].x_num, sc->offset_res_global, sc->convTypeRightInput);
 		PfMul(sc, &sc->tempInt, &sc->gl_WorkGroupID_x, &sc->outputStride[1], 0);
-		PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->tempInt);
-		PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->offset_res_global);
+		PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->tempInt);
+		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->offset_res_global);
 		if (sc->readToRegisters || sc->writeFromRegisters) {
 			if (readWrite)
-				appendRegistersToGlobal(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
+				appendRegistersToGlobal(sc, &sc->outputsStruct, &sc->tempInt, &sc->rd[i]);
 			else {
-				appendGlobalToRegisters(sc, &sc->rd[i], &sc->outputsStruct, &sc->inoutID);
+				appendGlobalToRegisters(sc, &sc->rd[i], &sc->outputsStruct, &sc->tempInt);
 				if (control_zp) {
 					PfIf_else(sc);
 					PfSetToZero(sc, &sc->rd[i]);
