@@ -1539,16 +1539,18 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
 	}
-	else {
-		PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
-	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if (i > 0) {
-			temp_int.data.i = sc->warpSize;
-			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
+			if (i > 0) {
+				temp_int.data.i = sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+		}else{
+			temp_int.data.i = i * sc->num_threads;
+			PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
 		}
 		
-		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
 		if (!sc->md_zero) {
@@ -1600,7 +1602,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			
 		}
 		
-		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
 			PfIf_end(sc);
 		}
 	}
@@ -1654,16 +1656,17 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
 	}
-	else {
-		PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
-	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if (i > 0) {
-			temp_int.data.i = sc->warpSize;
-			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
+			if (i > 0) {
+				temp_int.data.i = sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+			}
+		}else{
+			temp_int.data.i = i * sc->num_threads;
+			PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
 		}
-		
-		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
 		int control_zp = 0;
@@ -1688,20 +1691,20 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 		}
 		else {
 			temp_int.data.i = i * sc->num_threads + sc->offset_res.data.i;
-			PfAdd(sc, &sc->tempInt, &sc->gl_LocalInvocationID_x, &temp_int);
+			PfAdd(sc, &sc->inoutID_x, &sc->gl_LocalInvocationID_x, &temp_int);
 			
 			if (readWrite)
-				appendSharedToGlobal(sc, &sc->outputsStruct, &sc->inoutID, &sc->tempInt);
+				appendSharedToGlobal(sc, &sc->outputsStruct, &sc->tempInt, &sc->inoutID_x);
 			else {
-				appendGlobalToShared(sc, &sc->tempInt, &sc->outputsStruct, &sc->inoutID);
+				appendGlobalToShared(sc, &sc->inoutID_x, &sc->outputsStruct, &sc->tempInt);
 				if (control_zp) {
 					PfIf_else(sc);
-					PfSetToZeroShared(sc, &sc->tempInt);
+					PfSetToZeroShared(sc, &sc->inoutID_x);
 				}
 			}
 		}
 		if (control_zp) PfIf_end(sc);
-		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || (sc->warpSize * sc->registers_per_thread < sc->M_size_pow2.data.i)) {
+		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
 			PfIf_end(sc);
 		}
 	}
