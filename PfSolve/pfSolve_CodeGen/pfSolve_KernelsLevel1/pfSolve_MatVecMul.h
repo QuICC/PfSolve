@@ -57,7 +57,7 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 
 			*/
 
-			if (i * sc->num_threads < sc->M_size.data.i){
+			if (i * sc->num_threads < sc->M_size_pow2.data.i){
 				if (!sc->ud_zero) {
 					if (i < sc->registers_per_thread-1) {
 						temp_int.data.i = 1;
