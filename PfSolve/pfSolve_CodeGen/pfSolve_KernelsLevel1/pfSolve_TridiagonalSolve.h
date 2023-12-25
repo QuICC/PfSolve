@@ -344,6 +344,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 				temp_int.data.i = sc->warpSize;
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 			}
+			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
@@ -352,6 +353,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
 			appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+			PfIf_end(sc);
 		}
 		appendBarrierPfSolve(sc);
 
@@ -363,6 +365,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 				temp_int.data.i = sc->num_threads;
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 			}
+			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
@@ -371,6 +374,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
 			appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+			PfIf_end(sc);
 		}
 		appendBarrierPfSolve(sc);
 
@@ -382,6 +386,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 				temp_int.data.i = sc->warpSize;
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 			}
+			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
@@ -390,11 +395,12 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
 			if (!sc->ld_zero) {
-				appendRegistersToShared(sc, &sc->inoutID, &sc->ld[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &sc->ld[i]);
 			}
 			if (!sc->ud_zero) {
-				appendRegistersToShared(sc, &sc->inoutID, &sc->ud[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &sc->ud[i]);
 			}
+			PfIf_end(sc);
 		}
 		appendBarrierPfSolve(sc);
 
@@ -406,6 +412,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 				temp_int.data.i = sc->num_threads;
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 			}
+			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
@@ -414,11 +421,12 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
 			if (!sc->ld_zero) {
-				appendSharedToRegisters(sc, &sc->ld[i], &sc->inoutID);
+				appendSharedToRegisters(sc, &sc->ld[i], &sc->tempInt);
 			}
 			if (!sc->ud_zero) {
-				appendSharedToRegisters(sc, &sc->ud[i], &sc->inoutID);
+				appendSharedToRegisters(sc, &sc->ud[i], &sc->tempInt);
 			}
+			PfIf_end(sc);
 		}
 		appendBarrierPfSolve(sc);
 	}
@@ -731,6 +739,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 				temp_int.data.i = sc->num_threads;
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 			}
+			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
@@ -738,7 +747,8 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
-			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+			appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+			PfIf_end(sc);
 		}
 		appendBarrierPfSolve(sc);
 
@@ -750,6 +760,7 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 				temp_int.data.i = sc->warpSize;
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 			}
+			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
@@ -757,7 +768,8 @@ static inline void appendTridiagonalSolve(PfSolveSpecializationConstantsLayout* 
 			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
-			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+			PfIf_end(sc);
 		}
 		appendBarrierPfSolve(sc);
 	}
