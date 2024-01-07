@@ -2142,7 +2142,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			configuration.size[2] = 1;
 			configuration.scaleC = 1;
 			configuration.jw_type = 10;
-			configuration.quadDoubleDoublePrecisionDoubleMemory = 1;
+			configuration.doublePrecision = 1;
 			configuration.isOutputFormatted = 1;
 			int* x;
 			int** y;
@@ -2154,7 +2154,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			configuration.outputBufferStride[0] = configuration.size[0];
 			//configuration.performWorland = 1;
 			//configuration.upperBanded = 1;
-			configuration.offsetV = 2 * configuration.size[0];
+			//configuration.offsetV = 2 * configuration.size[0];
 			//CUstream hStream;
 			//cudaStreamCreate(&hStream);
 			//configuration.stream = &hStream;
@@ -2245,12 +2245,12 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			else {
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
 					buffer_input_matrix[configuration.size[0] + i] = 1;
-					buffer_input_matrix_gpu[configuration.size[0] + i] = 1.0 / mu(i, -0.5, l - 0.5 + 1);;
+					buffer_input_matrix_gpu[i] = 1.0 / mu(i, -0.5, l - 0.5 + 1);;
 					//printf("%f\n", buffer_input_matrix_gpu[i]);.
 				}
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
 					buffer_input_matrix[i] = 0;
-					//buffer_input_matrix_gpu[i] = 0;
+					buffer_input_matrix_gpu[configuration.size[0] + i] = 0;
 				}
 			}
 			if (configuration.upperBanded != 1) {
@@ -2268,7 +2268,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			else {
 				for (uint64_t i = 0; i < 1 * configuration.size[0]-1; i++) {
 					buffer_input_matrix[3 * configuration.size[0] + i] = nu(i, -0.5, l - 0.5 + 1);// / mu(i, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
-					buffer_input_matrix_gpu[ i+1] = nu(i, -0.5, l - 0.5 + 1) / mu(i + 1, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
+					buffer_input_matrix_gpu[2 * configuration.size[0] + i+1] = nu(i, -0.5, l - 0.5 + 1) / mu(i + 1, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 					//printf("%f %f\n", buffer_input_matrix[3 * configuration.size[0] + i], buffer_input_matrix_gpu[1 + i]);
 				}
 				for (uint64_t i = 0; i < 1 * configuration.size[0]; i++) {

@@ -243,7 +243,10 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			}
 
 			//sc->read_SharedToRegisters = 0;
-			appendTridiagonalSolve(sc);
+			if(sc->useParallelThomas)
+				appendTridiagonalSolve_ParallelThomas(sc);
+			else
+				appendTridiagonalSolve_PCR(sc);
 
 			//sc->read_SharedToRegisters = 0;
 		}
