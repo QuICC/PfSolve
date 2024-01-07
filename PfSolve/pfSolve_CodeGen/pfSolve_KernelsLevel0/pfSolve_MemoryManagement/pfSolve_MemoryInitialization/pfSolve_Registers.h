@@ -176,8 +176,10 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 		PfDefine(sc, &sc->rd[i], name);
 		PfSetToZero(sc, &sc->rd[i]);
 	}
+	int64_t num_copy_registers = sc->registers_per_thread;
+	if (sc->useParallelThomas) num_copy_registers = 1;
 
-	for (int i = 0; i < sc->registers_per_thread; i++) {
+	for (int i = 0; i < num_copy_registers; i++) {
 		sc->rd_copy[i].type = 100 + sc->floatTypeCode;
 		PfAllocateContainerFlexible(sc, &sc->rd_copy[i], 50);
 		sprintf(name, "rd_copy_%d", i);

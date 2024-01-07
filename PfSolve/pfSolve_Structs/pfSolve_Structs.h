@@ -889,6 +889,7 @@ typedef struct {
 
 	int performMatVecMul;
 	int performTriSolve;
+	int useParallelThomas;
 	PfContainer* rd;
 	PfContainer* rd_copy;
 	PfContainer* ld;
