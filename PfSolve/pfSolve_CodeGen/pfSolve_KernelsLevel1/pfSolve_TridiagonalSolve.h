@@ -949,10 +949,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	int64_t shared_stride = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
 
 	if (sc->num_threads == sc->warpSize) {
-		if (sc->registers_per_thread == ((int64_t) pow(2, (int64_t)ceil(log2((double)sc->registers_per_thread)))))
-			shared_stride = sc->registers_per_thread + 1;
-		else 
-			shared_stride = sc->registers_per_thread;
+		shared_stride = 2*(sc->registers_per_thread/2) + 1;
 	}
 	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
 		next_stride = stride * 2;
