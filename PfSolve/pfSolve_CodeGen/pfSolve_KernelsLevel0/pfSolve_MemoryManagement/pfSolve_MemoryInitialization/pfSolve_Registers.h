@@ -177,7 +177,7 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 		PfSetToZero(sc, &sc->rd[i]);
 	}
 	int64_t num_copy_registers = sc->registers_per_thread;
-	if (sc->useParallelThomas) num_copy_registers = 1;
+	if (sc->useParallelThomas && (sc->warpSize == sc->num_threads)) num_copy_registers = 1;
 
 	for (int i = 0; i < num_copy_registers; i++) {
 		sc->rd_copy[i].type = 100 + sc->floatTypeCode;

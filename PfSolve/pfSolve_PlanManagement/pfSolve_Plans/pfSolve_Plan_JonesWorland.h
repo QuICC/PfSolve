@@ -128,7 +128,6 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 
 	axis->specializationConstants.registers_per_thread = 1;
 	int numWarps = (uint64_t)ceil((app->configuration.M_size_pow2 / (double)app->configuration.warpSize) / 4.0);
-	if (axis->specializationConstants.useParallelThomas) numWarps = 1;
 	if ((numWarps * app->configuration.warpSize) > app->configuration.maxThreadsNum) numWarps = app->configuration.maxThreadsNum / app->configuration.warpSize;
 	axis->axisBlock[0] = app->configuration.M_size_pow2 / numWarps;
 	while (axis->axisBlock[0] > app->configuration.warpSize) {
@@ -142,7 +141,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 
 	axis->specializationConstants.usedSharedMemory.type = 31;
 	if (axis->specializationConstants.useParallelThomas)
-		axis->specializationConstants.usedSharedMemory.data.i = ((axis->specializationConstants.registers_per_thread + 1) * axis->specializationConstants.warpSize) * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
+		axis->specializationConstants.usedSharedMemory.data.i = ((axis->specializationConstants.num_threads / axis->specializationConstants.warpSize * axis->specializationConstants.registers_per_thread + 1) * axis->specializationConstants.warpSize) * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	else
 		axis->specializationConstants.usedSharedMemory.data.i = (axis->specializationConstants.num_threads == axis->specializationConstants.warpSize) ? 0 : ((numWarps+1) * axis->specializationConstants.warpSize) * axis->specializationConstants.registers_per_thread * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 
