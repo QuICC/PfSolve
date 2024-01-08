@@ -945,8 +945,15 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
 	int64_t stride = 1;
 	int64_t next_stride = 1;
-	int64_t shared_stride = (sc->num_threads == sc->warpSize) ? 2*(sc->registers_per_thread / 2) + 1 : sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
 
+	int64_t shared_stride = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+
+	if (sc->num_threads == sc->warpSize) {
+		if (sc->registers_per_thread == ((int64_t) pow(2, (int64_t)ceil(log2((double)sc->registers_per_thread)))))
+			shared_stride = sc->registers_per_thread + 1;
+		else 
+			shared_stride = sc->registers_per_thread;
+	}
 	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
 		next_stride = stride * 2;
 		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
@@ -1186,14 +1193,19 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = shared_stride;
-		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+		}
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
-		appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+			appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+		}
 		PfIf_end(sc);
 	}
 	appendBarrierPfSolve(sc);
@@ -1214,14 +1226,19 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		}
 		PfSetToZero(sc, &sc->rd[i]);
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = shared_stride;
-		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+		}
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
-		appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+		}
 		PfIf_end(sc);
 	}
 	appendBarrierPfSolve(sc);
@@ -1239,18 +1256,28 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = shared_stride;
-		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-
-		if (!sc->ld_zero) {
-			appendRegistersToShared(sc, &sc->tempInt, &sc->ld[i]);
+		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+			if (!sc->ld_zero) {
+				appendRegistersToShared(sc, &sc->inoutID, &sc->ld[i]);
+			}
+			if (!sc->ud_zero) {
+				appendRegistersToShared(sc, &sc->inoutID, &sc->ud[i]);
+			}
 		}
-		if (!sc->ud_zero) {
-			appendRegistersToShared(sc, &sc->tempInt, &sc->ud[i]);
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+			if (!sc->ld_zero) {
+				appendRegistersToShared(sc, &sc->tempInt, &sc->ld[i]);
+			}
+			if (!sc->ud_zero) {
+				appendRegistersToShared(sc, &sc->tempInt, &sc->ud[i]);
+			}
 		}
 		PfIf_end(sc);
 	}
@@ -1271,18 +1298,28 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = shared_stride;
-		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-
-		if (!sc->ld_zero) {
-			appendSharedToRegisters(sc, &sc->ld[i], &sc->tempInt);
+		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+			if (!sc->ld_zero) {
+				appendSharedToRegisters(sc, &sc->ld[i], &sc->inoutID);
+			}
+			if (!sc->ud_zero) {
+				appendSharedToRegisters(sc, &sc->ud[i], &sc->inoutID);
+			}
 		}
-		if (!sc->ud_zero) {
-			appendSharedToRegisters(sc, &sc->ud[i], &sc->tempInt);
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+			if (!sc->ld_zero) {
+				appendSharedToRegisters(sc, &sc->ld[i], &sc->tempInt);
+			}
+			if (!sc->ud_zero) {
+				appendSharedToRegisters(sc, &sc->ud[i], &sc->tempInt);
+			}
 		}
 		PfIf_end(sc);
 	}
@@ -1385,14 +1422,19 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = shared_stride;
-		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+		}
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
-		appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+			appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+		}
 		PfIf_end(sc);
 	}
 	appendBarrierPfSolve(sc);
@@ -1414,14 +1456,19 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = shared_stride;
-		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+		}
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
-		appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+		}
 		PfIf_end(sc);
 	}
 	appendBarrierPfSolve(sc);
