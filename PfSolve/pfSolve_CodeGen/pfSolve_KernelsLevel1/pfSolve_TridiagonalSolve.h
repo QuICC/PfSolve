@@ -945,6 +945,8 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
 	int64_t stride = 1;
 	int64_t next_stride = 1;
+	int64_t next_pow2_reg_num = (int64_t) pow(2, (int64_t)ceil(log2((double)sc->registers_per_thread)));
+		
 	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
 		next_stride = stride * 2;
 		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
@@ -1187,7 +1189,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
 		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+		temp_int.data.i = sc->num_threads / sc->warpSize * next_pow2_reg_num + 1;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
@@ -1215,7 +1217,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
 		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+		temp_int.data.i = sc->num_threads / sc->warpSize * next_pow2_reg_num + 1;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
@@ -1240,7 +1242,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
 		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+		temp_int.data.i = sc->num_threads / sc->warpSize * next_pow2_reg_num + 1;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
@@ -1272,7 +1274,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
 		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+		temp_int.data.i = sc->num_threads / sc->warpSize * next_pow2_reg_num + 1;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
@@ -1386,7 +1388,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
 		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+		temp_int.data.i = sc->num_threads / sc->warpSize * next_pow2_reg_num + 1;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
@@ -1415,7 +1417,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
 		PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 		PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
+		temp_int.data.i = sc->num_threads / sc->warpSize * next_pow2_reg_num + 1;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
 
