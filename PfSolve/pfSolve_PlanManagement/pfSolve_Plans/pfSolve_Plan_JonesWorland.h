@@ -128,7 +128,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 
 	axis->specializationConstants.registers_per_thread = 1;
 	int numWarps = (uint64_t)ceil((app->configuration.M_size_pow2 / (double)app->configuration.warpSize) / 4.0);
-	if (axis->specializationConstants.useParallelThomas) numWarps = 1;// (uint64_t)ceil((app->configuration.M_size_pow2 / (double)app->configuration.warpSize) / 8.0);
+	if (axis->specializationConstants.useParallelThomas) (uint64_t)ceil((app->configuration.M_size_pow2 / (double)app->configuration.warpSize) / 8.0);
 	if ((numWarps * app->configuration.warpSize) > app->configuration.maxThreadsNum) numWarps = app->configuration.maxThreadsNum / app->configuration.warpSize;
 	
 	if (axis->specializationConstants.useParallelThomas && (numWarps == 1)) {
