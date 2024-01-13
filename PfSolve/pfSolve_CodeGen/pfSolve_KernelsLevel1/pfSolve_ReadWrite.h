@@ -1875,7 +1875,7 @@ static inline void appendReadWrite_copy(PfSolveSpecializationConstantsLayout* sc
 				temp_int.data.i = 2;
 				PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
 				appendRegistersToGlobal_x(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
-				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->outputStride[1], 0);
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->outputStride[1]);
 				appendRegistersToGlobal_y(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
 			}
 			else
@@ -1892,7 +1892,7 @@ static inline void appendReadWrite_copy(PfSolveSpecializationConstantsLayout* sc
 				temp_int.data.i = 2;
 				PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
 				appendGlobalToRegisters_x(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
-				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->inputStride[1], 0);
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->inputStride[1]);
 				appendGlobalToRegisters_y(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
 			}
             else
