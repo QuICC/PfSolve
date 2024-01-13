@@ -1071,14 +1071,14 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 	
 	PfContainer* typeOutputMemory;
 	
-	if ((sc->block%10 == 2) || (sc->block%10 == 3))
+	if ((sc->block%10 == 2) || (sc->block%10 == 3) || (sc->block%10 == 4))
 		typeInputMemory = vecTypeInputMemory;
     else 
 		typeInputMemory = floatTypeInputMemory;
 
 	PfAllocateContainerFlexible(sc, &sc->outputsStruct, 50);
 
-	if ((sc->block%10 == 4) || (sc->block%10 == 5))
+	if ((sc->block%10 == 5) || (sc->block%10 == 6) || (sc->block%10 == 7))
 		typeOutputMemory = vecTypeOutputMemory;
     else
 		typeOutputMemory = floatTypeOutputMemory;

@@ -1871,16 +1871,30 @@ static inline void appendReadWrite_copy(PfSolveSpecializationConstantsLayout* sc
 				appendRegistersToGlobal_x(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
 			else if ((sc->block % 10) == 3)
 				appendRegistersToGlobal_y(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
+			else if ((sc->block % 10) == 4){
+				temp_int.data.i = 2;
+				PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
+				appendRegistersToGlobal_x(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->outputStride[1], 0);
+				appendRegistersToGlobal_y(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
+			}
 			else
 				appendRegistersToGlobal(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
 			
 			//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " = %s%s[id_x + id_y * %" PRIu64 " + %" PRIu64 "]%s;\n", i, sc->convTypeLeftInput, sc->inputsStruct, sc->inputStride[1], sc->offset_md_global, sc->convTypeRightInput);
 		}
 		else {
-			if ((sc->block % 10) == 4)
+			if ((sc->block % 10) == 5)
 				appendGlobalToRegisters_x(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
-			else if ((sc->block % 10) == 5)
+			else if ((sc->block % 10) == 6)
 				appendGlobalToRegisters_y(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
+			else if ((sc->block % 10) == 7){
+				temp_int.data.i = 2;
+				PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
+				appendGlobalToRegisters_x(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->inputStride[1], 0);
+				appendGlobalToRegisters_y(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
+			}
             else
 				appendGlobalToRegisters(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
 			//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " = %s%s[id_x + id_y * %" PRIu64 " + %" PRIu64 "]%s;\n", i, sc->convTypeLeftInput, sc->inputsStruct, sc->inputStride[1], sc->offset_md_global, sc->convTypeRightInput);

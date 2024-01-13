@@ -328,7 +328,7 @@ static inline void appendRegistersInitialization_block(PfSolveSpecializationCons
 	temp_int.type = 31;
     char name[50];
 	int typeCode = sc->floatTypeCode;
-	if ((sc->block%10 == 2) || (sc->block%10 == 3))
+	if ((sc->block%10 == 2) || (sc->block%10 == 3) || (sc->block%10 == 4) || (sc->block%10 == 5) || (sc->block%10 == 6) || (sc->block%10 == 7))
 		typeCode = sc->vecTypeCode;
     else 
 		typeCode = sc->floatTypeCode;

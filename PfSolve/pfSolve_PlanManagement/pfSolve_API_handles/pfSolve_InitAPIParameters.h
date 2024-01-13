@@ -552,13 +552,13 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 	sc->tempLen = 0;
 	sc->currentLen = 0;
 
-    if ((sc->block%10 == 2) || (sc->block%10 == 3))
+    if ((sc->block%10 == 2) || (sc->block%10 == 3) || (sc->block%10 == 4))
 		sc->inputsStruct.type = 200 + sc->vecTypeInputMemoryCode;
     else 
 		sc->inputsStruct.type = 200 + sc->floatTypeInputMemoryCode;
 	PfAllocateContainerFlexible(sc, &sc->inputsStruct, 50);
 
-	if ((sc->block%10 == 4) || (sc->block%10 == 5))
+	if ((sc->block%10 == 5) || (sc->block%10 == 6) || (sc->block%10 == 7))
 		sc->outputsStruct.type = 200 + sc->vecTypeOutputMemoryCode;
     else
 		sc->outputsStruct.type = 200 + sc->floatTypeOutputMemoryCode;
