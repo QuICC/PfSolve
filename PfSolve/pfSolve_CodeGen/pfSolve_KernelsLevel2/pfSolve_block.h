@@ -100,10 +100,7 @@ static inline PfSolveResult PfSolve_shaderGen_block(PfSolveSpecializationConstan
 		}
 	}
 	
-    if(((sc->block/10)%10) == 0)
-		appendReadWrite_block(sc, 1);
-    else 
-		appendReadWrite_copy(sc, 1);
+    appendReadWrite_block(sc, 1);
 
 	appendKernelEnd(sc);
 
