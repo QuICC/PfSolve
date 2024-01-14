@@ -1749,6 +1749,10 @@ static inline void appendReadWrite_block(PfSolveSpecializationConstantsLayout* s
 			PfMul(sc, &sc->inoutID, &sc->inoutID_y, &sc->inputStride[1], 0);
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->offset_md_global);
 		}
+		if ((((sc->block % 10) == 4)&&(readWrite)) || (((sc->block % 10) == 7) && (!readWrite))){
+			temp_int.data.i = 2;
+			PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
+		}
 		PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->inoutID_x);
 
 		if (readWrite) {
@@ -1768,8 +1772,6 @@ static inline void appendReadWrite_block(PfSolveSpecializationConstantsLayout* s
 			else if ((sc->block % 10) == 3)
 				appendRegistersToGlobal_y(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
 			else if ((sc->block % 10) == 4){
-				temp_int.data.i = 2;
-				PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
 				appendRegistersToGlobal_x(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->outputStride[1]);
 				appendRegistersToGlobal_y(sc, &sc->outputsStruct, &sc->inoutID, &sc->rd[i]);
@@ -1785,8 +1787,6 @@ static inline void appendReadWrite_block(PfSolveSpecializationConstantsLayout* s
 			else if ((sc->block % 10) == 6)
 				appendGlobalToRegisters_y(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
 			else if ((sc->block % 10) == 7){
-				temp_int.data.i = 2;
-				PfMul(sc, &sc->inoutID, &sc->inoutID, &temp_int, 0);
 				appendGlobalToRegisters_x(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
 				PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->inputStride[1]);
 				appendGlobalToRegisters_y(sc, &sc->rd[i], &sc->inputsStruct, &sc->inoutID);
