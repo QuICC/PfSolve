@@ -149,7 +149,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.num_threads = axis->axisBlock[0] * axis->axisBlock[1] * axis->axisBlock[2];
 
 	axis->specializationConstants.usedSharedMemory.type = 31;
-	if (axis->specializationConstants.useParallelThomas) {
+	if ((axis->specializationConstants.useParallelThomas) && (numWarps == 1)){
 		int64_t shared_stride = 2*(axis->specializationConstants.registers_per_thread / 2) + 1;
 		axis->specializationConstants.usedSharedMemory.data.i = (shared_stride * axis->specializationConstants.warpSize) * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	}
