@@ -811,390 +811,134 @@ static inline void appendTridiagonalSolve_PCR(PfSolveSpecializationConstantsLayo
 		//PfAppendLine(sc);
 		//
 	}*/
-	for (uint64_t i = 0; i < 0*sc->registers_per_thread; i++) {
+for (uint64_t i = 0; i < 0 * sc->registers_per_thread; i++) {
 
-			/*if ((i == 0)) {
-										sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
-										PfAppendLine(sc);
-										
-									}*/
-		if (!sc->ud_zero) {
-			if (i + (stride / sc->warpSize) < sc->registers_per_thread) {
-				PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i + (stride / sc->warpSize)], stride - (stride / sc->warpSize) * sc->warpSize);
-			}
-			if (i + (stride / 2 / sc->warpSize) < sc->registers_per_thread) {
-				PfSubgroupShuffleDown(sc, &sc->temp1, &sc->rd[i + (stride / 2 / sc->warpSize)], stride / 2 - (stride / 2 / sc->warpSize) * sc->warpSize);
-			}
+	/*if ((i == 0)) {
+								sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
+								PfAppendLine(sc);
+
+							}*/
+	if (!sc->ud_zero) {
+		if (i + (stride / sc->warpSize) < sc->registers_per_thread) {
+			PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i + (stride / sc->warpSize)], stride - (stride / sc->warpSize) * sc->warpSize);
 		}
-		if (!sc->ld_zero) {
-			if (i >= (stride / sc->warpSize)) {
-				PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[i - (stride / sc->warpSize)], stride - (stride / sc->warpSize) * sc->warpSize);
-			}
-			if (i >= (stride / 2 / sc->warpSize)) {
-				//PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i + (stride / 2 / sc->warpSize)], stride / 2 - (stride / 2 / sc->warpSize) * sc->warpSize);
-			}
+		if (i + (stride / 2 / sc->warpSize) < sc->registers_per_thread) {
+			PfSubgroupShuffleDown(sc, &sc->temp1, &sc->rd[i + (stride / 2 / sc->warpSize)], stride / 2 - (stride / 2 / sc->warpSize) * sc->warpSize);
 		}
-		//sc->tempLen = sprintf(sc->tempStr, "	if (acc_%" PRIi64 "==0){\n",i);
-		////sc->tempLen = sprintf(sc->tempStr, "	if ((id_x<%" PRIi64 ") && (id_x>=%" PRIi64 ")){\n", stride - i * sc->num_threads, sc->M_size.x_num - stride - i * sc->num_threads);
-		temp_int.data.i = stride - i * sc->num_threads;
-		if (temp_int.data.i < 0) 
-			temp_int.data.i = 0;
-		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+	}
+	if (!sc->ld_zero) {
+		if (i >= (stride / sc->warpSize)) {
+			PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[i - (stride / sc->warpSize)], stride - (stride / sc->warpSize) * sc->warpSize);
+		}
+		if (i >= (stride / 2 / sc->warpSize)) {
+			//PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i + (stride / 2 / sc->warpSize)], stride / 2 - (stride / 2 / sc->warpSize) * sc->warpSize);
+		}
+	}
+	//sc->tempLen = sprintf(sc->tempStr, "	if (acc_%" PRIi64 "==0){\n",i);
+	////sc->tempLen = sprintf(sc->tempStr, "	if ((id_x<%" PRIi64 ") && (id_x>=%" PRIi64 ")){\n", stride - i * sc->num_threads, sc->M_size.x_num - stride - i * sc->num_threads);
+	temp_int.data.i = stride - i * sc->num_threads;
+	if (temp_int.data.i < 0)
+		temp_int.data.i = 0;
+	PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
-		temp_int.data.i = sc->M_size.data.i - stride - i * sc->num_threads;
-		if (temp_int.data.i < 0) 
-			temp_int.data.i = 0;
-		PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+	temp_int.data.i = sc->M_size.data.i - stride - i * sc->num_threads;
+	if (temp_int.data.i < 0)
+		temp_int.data.i = 0;
+	PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
-		PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
-		//sc->tempLen = sprintf(sc->tempStr, "		res_%" PRIi64 " = res_%" PRIi64 ";// / md_%" PRIi64 ";\n", i, i, i);
+	PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
+	//sc->tempLen = sprintf(sc->tempStr, "		res_%" PRIi64 " = res_%" PRIi64 ";// / md_%" PRIi64 ";\n", i, i, i);
+	//PfAppendLine(sc);
+
+	PfIf_else(sc);
+
+	//sc->tempLen = sprintf(sc->tempStr, "	else if (id_x < %" PRIi64 ") {\n", stride - i*sc->num_threads);
+	//PfAppendLine(sc);
+
+	if (!sc->ud_zero) {
+		PfMul(sc, &sc->temp1, &sc->temp1, &sc->ud[i], 0);
+		PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp1);
+	}
+	else {
+	}
+	PfIf_end(sc);
+	PfIf_else(sc);
+	if (!sc->ld_zero) {
+		//sc->tempLen = sprintf(sc->tempStr, "	ld_%" PRIi64 " = sdata[id_x + %" PRIi64 "];\n", i , sc->offset_ld + i*sc->num_threads);
 		//PfAppendLine(sc);
-		
-		PfIf_else(sc);
-		
-		//sc->tempLen = sprintf(sc->tempStr, "	else if (id_x < %" PRIi64 ") {\n", stride - i*sc->num_threads);
-		//PfAppendLine(sc);
-		
+
+	}
+	if (!sc->ld_zero) {
 		if (!sc->ud_zero) {
-			PfMul(sc, &sc->temp1, &sc->temp1, &sc->ud[i], 0);
-			PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp1);
+			//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIi64 " = (res_%" PRIi64 " - sdata[id_x+%" PRIi64 "] * ld_%" PRIi64 ") / (1.0%s - sdata[id_x+%" PRIi64 "] * ld_%" PRIi64 ");\n", i, i, sc->offset_res - stride + i*sc->num_threads, i, sc->LFending, sc->offset_ud - stride + i*sc->num_threads, i);
+			//PfAppendLine(sc);
+
 		}
 		else {
+			//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIi64 " = (res_%" PRIi64 " - temp_k * ld_%" PRIi64 ") ;\n", i, i,  i);
+			PfMul(sc, &sc->temp, &sc->temp, &sc->ld[i], 0);
+			PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
 		}
-		PfIf_end(sc);
-		PfIf_else(sc);
-		if (!sc->ld_zero){
-			//sc->tempLen = sprintf(sc->tempStr, "	ld_%" PRIi64 " = sdata[id_x + %" PRIi64 "];\n", i , sc->offset_ld + i*sc->num_threads);
-			//PfAppendLine(sc);
-			
-		}
-		if (!sc->ld_zero){
-			if (!sc->ud_zero){
-				//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIi64 " = (res_%" PRIi64 " - sdata[id_x+%" PRIi64 "] * ld_%" PRIi64 ") / (1.0%s - sdata[id_x+%" PRIi64 "] * ld_%" PRIi64 ");\n", i, i, sc->offset_res - stride + i*sc->num_threads, i, sc->LFending, sc->offset_ud - stride + i*sc->num_threads, i);
-				//PfAppendLine(sc);
-				
-			}else{
-				//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIi64 " = (res_%" PRIi64 " - temp_k * ld_%" PRIi64 ") ;\n", i, i,  i);
-				PfMul(sc, &sc->temp, &sc->temp, &sc->ld[i], 0);
-				PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
-			}
-		}else{
-			//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIi64 " = (res_%" PRIi64 ") ;\n", i, i);
-		}
-		PfIf_end(sc);
-		//if ((sc->scaleC)&&(i==0)){
-		if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type>100)) {
-			temp_int.data.i = 0;
-			PfIf_eq_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-			//sc->tempLen = sprintf(sc->tempStr, "	if (%s == 0 ) res_%" PRIu64 " *= %s%s;\n", sc->gl_LocalInvocationID_x, 0, sc->scaleC.x_str, sc->LFending);
-			PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->scaleC, 0);
-			PfIf_end(sc);
-		}
-		//}
 	}
-	
-	/*if (sc->write_RegistersToShared) {
-		appendBarrier(sc);
-		
-		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-			appendRegistersToShared_res(sc, i);
-			
-		}
-	}	
-	if (sc->write_SharedToRegisters) {
-		appendSharedToRegisters(sc);
-		
-	}*/
-	return;
+	else {
+		//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIi64 " = (res_%" PRIi64 ") ;\n", i, i);
+	}
+	PfIf_end(sc);
+	//if ((sc->scaleC)&&(i==0)){
+	if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type > 100)) {
+		temp_int.data.i = 0;
+		PfIf_eq_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+		//sc->tempLen = sprintf(sc->tempStr, "	if (%s == 0 ) res_%" PRIu64 " *= %s%s;\n", sc->gl_LocalInvocationID_x, 0, sc->scaleC.x_str, sc->LFending);
+		PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->scaleC, 0);
+		PfIf_end(sc);
+	}
+	//}
 }
 
-static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationConstantsLayout* sc) {
+/*if (sc->write_RegistersToShared) {
+	appendBarrier(sc);
+
+	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+		appendRegistersToShared_res(sc, i);
+
+	}
+}
+if (sc->write_SharedToRegisters) {
+	appendSharedToRegisters(sc);
+
+}*/
+return;
+}
+static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSolveSpecializationConstantsLayout* sc){
 	if (sc->res != PFSOLVE_SUCCESS) return;
-	/*
-		Kernel can have two input types - from registers or from shared memory. In second case, a copy of state in registers is created.
-	*/
 	PfContainer temp_int = {};
 	temp_int.type = 31;
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
 	PfContainer temp_double = {};
 	temp_double.type = 32;
-
-	/*if (sc->read_SharedToRegisters) {
-		appendBarrier(sc);
-		
-		appendSharedToRegisters_init(sc);
-		
-		appendBarrier(sc);
-		
-		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-			appendRegistersToShared_mat_lu(sc, i);
-			
-		}
-		appendBarrier(sc);
-		
-	}
-	if (sc->read_RegistersToShared) {
-		appendRegistersToShared_mat(sc);
-		
-		appendBarrier(sc);
-		
-	}*/
-	//int64_t maxPCRiteration = (int64_t)ceil(log2(sc->M_size_pow2.data.i));
-	//int64_t BSsystemSize = 0;// sc->M_size_pow2.data.i / sc->warpSize;
 	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
-	int64_t stride = 1;
-	int64_t next_stride = 1;
-
-	int64_t shared_stride = sc->num_threads / sc->warpSize * sc->registers_per_thread + 1;
-
-	if (sc->num_threads == sc->warpSize) {
-		shared_stride = 2*(sc->registers_per_thread/2) + 1;
-	}
-	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
-		next_stride = stride * 2;
-		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-			/*if ((i == 0)) {
-							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
-							PfAppendLine(sc);
-							
-						}*/
-			//sc->tempLen = sprintf(sc->tempStr, "	{//if (acc_%" PRIi64 ">0){\n", i);
-			//PfAppendLine(sc);
-			//
-			if (!sc->ld_zero) {
-				PfMov(sc, &sc->temp, &sc->ld[i]);
-
-				if (i > 0) {
-					temp_int.data.i = sc->warpSize - stride;
-					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
-					PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
-					PfIf_else(sc);
-					PfMov(sc, &sc->ld_copy[i], &sc->ld[i]);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
-					PfIf_end(sc);
-				}
-				else {
-					PfMov(sc, &sc->ld_copy[i], &sc->ld[i]);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
-				}
-				PfSubgroupShuffleUpCyclic(sc, &sc->ld_copy[i], &sc->ld_copy[i], stride);
-
-				PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->rd_copy[i], stride);
-					
-				if (i == 0) {
-					temp_int.data.i = sc->warpSize - stride;
-					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
-
-					temp_int.data.i = stride;
-					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-					
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
-                                        temp_int.data.i = sc->warpSize - stride;
-					PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-
-					appendRegistersToShared(sc, &sc->tempInt, &sc->rd[sc->registers_per_thread - 1]);
-					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-					appendRegistersToShared(sc, &sc->tempInt, &sc->ld[sc->registers_per_thread - 1]);
-					PfIf_end(sc);
-
-					appendBarrierPfSolve(sc);
-
-					temp_int.data.i = stride;
-					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
-					
-					temp_int.data.i = 0;
-					PfIf_gt_start(sc, &sc->warpID, &temp_int);
-
-					temp_int.data.i = 1;
-					PfSub(sc, &sc->tempInt, &sc->warpID, &temp_int);
-					temp_int.data.i = stride;
-					PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
-
-					appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
-					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-					appendSharedToRegisters(sc, &sc->ld_copy[i], &sc->tempInt);
-					PfIf_end(sc);
-
-					PfIf_end(sc);
-
-					appendBarrierPfSolve(sc);
-				}
-				temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-				temp_int.data.i = i * sc->warpSize;
-				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
-
-				temp_int.data.i = stride;
-				PfIf_lt_start(sc, &sc->inoutID, &temp_int);
-				{
-				//temp_int.data.i = stride - i * sc->warpSize;
-				//if (temp_int.data.i > 0) {
-					PfSetToZero(sc, &sc->ld_copy[i]);
-					PfSetToZero(sc, &sc->temp);
-				}
-				PfIf_else(sc);
-				{
-					temp_int.data.i = next_stride;
-					PfIf_lt_start(sc, &sc->inoutID, &temp_int);
-					PfSetToZero(sc, &sc->ld_copy[i]);
-					PfIf_end(sc);
-				}
-				PfIf_end(sc);
-
-				PfMul(sc, &sc->ld_copy[i], &sc->ld_copy[i], &sc->temp, 0);
-				PfMovNeg(sc, &sc->ld_copy[i], &sc->ld_copy[i]);
-				PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
-					
-				if (!sc->ud_zero) {
-					PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp2);
-					//sc->tempLen = sprintf(sc->tempStr, "\n\
-		md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
-						
-				}
-				PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
-			}
-
-			if (!sc->ud_zero) {
-				PfMov(sc, &sc->temp, &sc->ud[i]);
-
-				if (i < (sc->registers_per_thread - 1)) {
-					temp_int.data.i = stride;
-					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
-					PfMov(sc, &sc->ud_copy[i], &sc->ud[i + 1]);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
-					PfIf_else(sc);
-					PfMov(sc, &sc->ud_copy[i], &sc->ud[i]);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
-					PfIf_end(sc);
-				}
-				else {
-					PfMov(sc, &sc->ud_copy[i], &sc->ud[i]);
-					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
-				}
-
-				PfSubgroupShuffleDownCyclic(sc, &sc->ud_copy[i], &sc->ud_copy[i], stride);
-				PfSubgroupShuffleDownCyclic(sc, &sc->temp1, &sc->rd_copy[i], stride);
-
-				if (i == (sc->registers_per_thread - 1)) {
-					temp_int.data.i = stride;
-					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
-
-					temp_int.data.i = stride;
-					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
-
-					appendRegistersToShared(sc, &sc->tempInt, &sc->rd[0]);
-					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-					appendRegistersToShared(sc, &sc->tempInt, &sc->ud[0]);
-					PfIf_end(sc);
-
-					appendBarrierPfSolve(sc);
-
-					temp_int.data.i = sc->warpSize - stride;
-					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
-					
-					temp_int.data.i = sc->num_threads/sc->warpSize - 1;
-					PfIf_lt_start(sc, &sc->warpID, &temp_int);
-
-					temp_int.data.i = 1;
-					PfAdd(sc, &sc->tempInt, &sc->warpID, &temp_int);
-					temp_int.data.i = stride;
-					PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-
-					temp_int.data.i = sc->warpSize - stride;
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
-					PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-
-					appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
-					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
-					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-					appendSharedToRegisters(sc, &sc->ud_copy[i], &sc->tempInt);
-
-					PfIf_end(sc);
-
-					PfIf_end(sc);
-
-					appendBarrierPfSolve(sc);
-				}
-
-				temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-				temp_int.data.i = i * sc->warpSize;
-				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
-
-				temp_int.data.i = sc->M_size.data.i - stride;
-				PfIf_ge_start(sc, &sc->inoutID, &temp_int);
-				{
-				//temp_int.data.i = stride - i * sc->warpSize;
-				//if (temp_int.data.i > 0) {
-					PfSetToZero(sc, &sc->ud_copy[i]);
-					PfSetToZero(sc, &sc->temp);
-				}
-				PfIf_else(sc);
-				{
-					temp_int.data.i = sc->M_size.data.i - next_stride;
-					PfIf_ge_start(sc, &sc->inoutID, &temp_int);
-					PfSetToZero(sc, &sc->ud_copy[i]);
-					PfIf_end(sc);
-				}
-				PfIf_end(sc);	
-					
-				PfMul(sc, &sc->ud_copy[i], &sc->ud_copy[i], &sc->temp, 0);
-				PfMovNeg(sc, &sc->ud_copy[i], &sc->ud_copy[i]);
-				PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
-
-				if (!sc->ld_zero) {
-					PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp2);
-					//sc->tempLen = sprintf(sc->tempStr, "\n\
-		md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
-
-				}
-				PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
-			}
-		}
-		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-			if (!sc->ld_zero) {
-				PfMov(sc, &sc->ld[i], &sc->ld_copy[i]);
-			}
-			if (!sc->ud_zero) {
-				PfMov(sc, &sc->ud[i], &sc->ud_copy[i]);
-			}
-			PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
-		}
-		//appendBarrier(sc);
-		
-
-		stride = next_stride;
-		
-	}
+	uint64_t used_registers = sc->registers_per_thread;// (sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
 	
+	int64_t shared_stride = sc->num_threads / sc->warpSize * used_registers + 1;
 	if (maxSharedMemPCRIteration > 0) {
-		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+		temp_int.data.i = sc->warpSize * used_registers;
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
 	}
 	else
 		PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
-	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+	for (uint64_t i = 0; i < used_registers; i++) {
 		if (i > 0) {
 			temp_int.data.i = sc->warpSize;
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+		if (shared_stride == (sc->num_threads / sc->warpSize * used_registers)){
 			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
 		}
 		else{
-			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			temp_int.data.i = sc->num_threads / sc->warpSize * used_registers;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
 			temp_int.data.i = shared_stride;
@@ -1208,26 +952,26 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	appendBarrierPfSolve(sc);
 
 	if (maxSharedMemPCRIteration > 0) {
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+		temp_int.data.i = sc->num_threads / sc->warpSize * used_registers;
 		PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
 	}
 	else {
-		temp_int.data.i = sc->registers_per_thread;
+		temp_int.data.i = used_registers;
 		PfMul(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int, 0);
 	}
-	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+	for (uint64_t i = 0; i < used_registers; i++) {
 		if (i > 0) {
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfSetToZero(sc, &sc->rd[i]);
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
+		if (shared_stride == (sc->num_threads / sc->warpSize * used_registers)){
 			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
 		}
 		else{
-			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
+			temp_int.data.i = sc->num_threads / sc->warpSize * used_registers;
 			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
 			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
 			temp_int.data.i = shared_stride;
@@ -1240,7 +984,9 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	}
 	appendBarrierPfSolve(sc);
 
-	if (maxSharedMemPCRIteration > 0) {
+	//reorder matrices on CPU
+
+	/*if (maxSharedMemPCRIteration > 0) {
 		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
@@ -1320,8 +1066,365 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		}
 		PfIf_end(sc);
 	}
+	appendBarrierPfSolve(sc);*/
+	return;
+}
+static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSolveSpecializationConstantsLayout* sc) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	PfContainer temp_int = {};
+	temp_int.type = 31;
+	PfContainer temp_int1 = {};
+	temp_int1.type = 31;
+	PfContainer temp_double = {};
+	temp_double.type = 32;
+	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
+	uint64_t used_registers = sc->registers_per_thread;//(sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
+	int64_t shared_stride = sc->num_threads / sc->warpSize * used_registers + 1;
+
+	if (sc->num_threads == sc->warpSize) {
+		shared_stride = 2*(used_registers/2) + 1;
+	}
+
+	if (maxSharedMemPCRIteration > 0) {
+		temp_int.data.i = sc->num_threads / sc->warpSize * used_registers;
+		PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
+	}
+	else {
+		temp_int.data.i = used_registers;
+		PfMul(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int, 0);
+	}
+	for (uint64_t i = 0; i < used_registers; i++) {
+		if (i > 0) {
+			temp_int.data.i = sc->num_threads / sc->warpSize;
+			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		}
+		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
+		if (shared_stride == (sc->num_threads / sc->warpSize * used_registers)){
+			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+		}
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * used_registers;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+			appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+		}
+		PfIf_end(sc);
+	}
+
 	appendBarrierPfSolve(sc);
-	for (uint64_t i = 1; i < sc->registers_per_thread; i++) {
+
+	/*temp_int.data.i = sc->num_threads / sc->warpSize;
+	PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+	PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);*/
+	if (maxSharedMemPCRIteration > 0) {
+		temp_int.data.i = sc->warpSize * used_registers;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+	}
+	else
+		PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
+
+	for (uint64_t i = 0; i < used_registers; i++) {
+		if (i > 0) {
+			temp_int.data.i = sc->warpSize;
+			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		}
+		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
+		if (shared_stride == (sc->num_threads / sc->warpSize * used_registers)){
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+		}
+		else{
+			temp_int.data.i = sc->num_threads / sc->warpSize * used_registers;
+			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+			temp_int.data.i = shared_stride;
+			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+			appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+		}
+		PfIf_end(sc);
+	}
+	appendBarrierPfSolve(sc);
+	return;
+}
+static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationConstantsLayout* sc) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	/*
+		Kernel can have two input types - from registers or from shared memory. In second case, a copy of state in registers is created.
+	*/
+	PfContainer temp_int = {};
+	temp_int.type = 31;
+	PfContainer temp_int1 = {};
+	temp_int1.type = 31;
+	PfContainer temp_double = {};
+	temp_double.type = 32;
+
+	/*if (sc->read_SharedToRegisters) {
+		appendBarrier(sc);
+		
+		appendSharedToRegisters_init(sc);
+		
+		appendBarrier(sc);
+		
+		for (uint64_t i = 0; i < used_registers; i++) {
+			appendRegistersToShared_mat_lu(sc, i);
+			
+		}
+		appendBarrier(sc);
+		
+	}
+	if (sc->read_RegistersToShared) {
+		appendRegistersToShared_mat(sc);
+		
+		appendBarrier(sc);
+		
+	}*/
+	//int64_t maxPCRiteration = (int64_t)ceil(log2(sc->M_size_pow2.data.i));
+	//int64_t BSsystemSize = 0;// sc->M_size_pow2.data.i / sc->warpSize;
+	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
+	int64_t stride = 1;
+	int64_t next_stride = 1;
+	uint64_t used_registers = sc->registers_per_thread;//(sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
+	
+	int64_t shared_stride = sc->num_threads / sc->warpSize * used_registers + 1;
+
+	if (sc->num_threads == sc->warpSize) {
+		shared_stride = 2*(used_registers/2) + 1;
+	}
+	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
+		next_stride = stride * 2;
+		for (uint64_t i = 0; i < used_registers; i++) {
+			/*if ((i == 0)) {
+							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
+							PfAppendLine(sc);
+							
+						}*/
+			//sc->tempLen = sprintf(sc->tempStr, "	{//if (acc_%" PRIi64 ">0){\n", i);
+			//PfAppendLine(sc);
+			//
+			if (!sc->ld_zero) {
+				PfMov(sc, &sc->temp, &sc->ld[i]);
+
+				if (i > 0) {
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+					PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
+					PfIf_else(sc);
+					PfMov(sc, &sc->ld_copy[i], &sc->ld[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+					PfIf_end(sc);
+				}
+				else {
+					PfMov(sc, &sc->ld_copy[i], &sc->ld[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+				}
+				PfSubgroupShuffleUpCyclic(sc, &sc->ld_copy[i], &sc->ld_copy[i], stride);
+
+				PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->rd_copy[i], stride);
+					
+				if (i == 0) {
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+					
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+                                        temp_int.data.i = sc->warpSize - stride;
+					PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+
+					appendRegistersToShared(sc, &sc->tempInt, &sc->rd[used_registers - 1]);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendRegistersToShared(sc, &sc->tempInt, &sc->ld[used_registers - 1]);
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+
+					temp_int.data.i = stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+					
+					temp_int.data.i = 0;
+					PfIf_gt_start(sc, &sc->warpID, &temp_int);
+
+					temp_int.data.i = 1;
+					PfSub(sc, &sc->tempInt, &sc->warpID, &temp_int);
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+
+					appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendSharedToRegisters(sc, &sc->ld_copy[i], &sc->tempInt);
+					PfIf_end(sc);
+
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+				}
+				temp_int.data.i = sc->warpSize * used_registers;
+				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+				temp_int.data.i = i * sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+
+				temp_int.data.i = stride;
+				PfIf_lt_start(sc, &sc->inoutID, &temp_int);
+				{
+				//temp_int.data.i = stride - i * sc->warpSize;
+				//if (temp_int.data.i > 0) {
+					PfSetToZero(sc, &sc->ld_copy[i]);
+					PfSetToZero(sc, &sc->temp);
+				}
+				PfIf_else(sc);
+				{
+					temp_int.data.i = next_stride;
+					PfIf_lt_start(sc, &sc->inoutID, &temp_int);
+					PfSetToZero(sc, &sc->ld_copy[i]);
+					PfIf_end(sc);
+				}
+				PfIf_end(sc);
+
+				PfMul(sc, &sc->ld_copy[i], &sc->ld_copy[i], &sc->temp, 0);
+				PfMovNeg(sc, &sc->ld_copy[i], &sc->ld_copy[i]);
+				PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
+					
+				if (!sc->ud_zero) {
+					PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp2);
+					//sc->tempLen = sprintf(sc->tempStr, "\n\
+		md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
+						
+				}
+				PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
+			}
+
+			if (!sc->ud_zero) {
+				PfMov(sc, &sc->temp, &sc->ud[i]);
+
+				if (i < (used_registers - 1)) {
+					temp_int.data.i = stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+					PfMov(sc, &sc->ud_copy[i], &sc->ud[i + 1]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i + 1]);
+					PfIf_else(sc);
+					PfMov(sc, &sc->ud_copy[i], &sc->ud[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+					PfIf_end(sc);
+				}
+				else {
+					PfMov(sc, &sc->ud_copy[i], &sc->ud[i]);
+					PfMov(sc, &sc->rd_copy[i], &sc->rd[i]);
+				}
+
+				PfSubgroupShuffleDownCyclic(sc, &sc->ud_copy[i], &sc->ud_copy[i], stride);
+				PfSubgroupShuffleDownCyclic(sc, &sc->temp1, &sc->rd_copy[i], stride);
+
+				if (i == (used_registers - 1)) {
+					temp_int.data.i = stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+
+					appendRegistersToShared(sc, &sc->tempInt, &sc->rd[0]);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendRegistersToShared(sc, &sc->tempInt, &sc->ud[0]);
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+					
+					temp_int.data.i = sc->num_threads/sc->warpSize - 1;
+					PfIf_lt_start(sc, &sc->warpID, &temp_int);
+
+					temp_int.data.i = 1;
+					PfAdd(sc, &sc->tempInt, &sc->warpID, &temp_int);
+					temp_int.data.i = stride;
+					PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+
+					temp_int.data.i = sc->warpSize - stride;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+					PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+
+					appendSharedToRegisters(sc, &sc->temp1, &sc->tempInt);
+					temp_int.data.i = stride * sc->num_threads / sc->warpSize;
+					PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+					appendSharedToRegisters(sc, &sc->ud_copy[i], &sc->tempInt);
+
+					PfIf_end(sc);
+
+					PfIf_end(sc);
+
+					appendBarrierPfSolve(sc);
+				}
+
+				temp_int.data.i = sc->warpSize * used_registers;
+				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
+				temp_int.data.i = i * sc->warpSize;
+				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+
+				temp_int.data.i = sc->M_size.data.i - stride;
+				PfIf_ge_start(sc, &sc->inoutID, &temp_int);
+				{
+				//temp_int.data.i = stride - i * sc->warpSize;
+				//if (temp_int.data.i > 0) {
+					PfSetToZero(sc, &sc->ud_copy[i]);
+					PfSetToZero(sc, &sc->temp);
+				}
+				PfIf_else(sc);
+				{
+					temp_int.data.i = sc->M_size.data.i - next_stride;
+					PfIf_ge_start(sc, &sc->inoutID, &temp_int);
+					PfSetToZero(sc, &sc->ud_copy[i]);
+					PfIf_end(sc);
+				}
+				PfIf_end(sc);	
+					
+				PfMul(sc, &sc->ud_copy[i], &sc->ud_copy[i], &sc->temp, 0);
+				PfMovNeg(sc, &sc->ud_copy[i], &sc->ud_copy[i]);
+				PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
+
+				if (!sc->ld_zero) {
+					PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp2);
+					//sc->tempLen = sprintf(sc->tempStr, "\n\
+		md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
+
+				}
+				PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
+			}
+		}
+		for (uint64_t i = 0; i < used_registers; i++) {
+			if (!sc->ld_zero) {
+				PfMov(sc, &sc->ld[i], &sc->ld_copy[i]);
+			}
+			if (!sc->ud_zero) {
+				PfMov(sc, &sc->ud[i], &sc->ud_copy[i]);
+			}
+			PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
+		}
+		//appendBarrier(sc);
+		
+
+		stride = next_stride;
+		
+	}
+	
+
+	for (uint64_t i = 1; i < used_registers; i++) {
 		if (!sc->ld_zero) {
 			PfMul(sc, &sc->temp, &sc->ld[i], &sc->rd[i-1], 0);
 			PfSub(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
@@ -1330,16 +1433,16 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfMovNeg(sc, &sc->ld[i], &sc->temp);
 		}
 		if (!sc->ud_zero) {
-			PfMul(sc, &sc->temp, &sc->ud[sc->registers_per_thread - i - 1], &sc->rd[sc->registers_per_thread - i], 0);
-			PfSub(sc, &sc->rd[sc->registers_per_thread - i - 1], &sc->rd[sc->registers_per_thread - i - 1], &sc->temp);
+			PfMul(sc, &sc->temp, &sc->ud[used_registers - i - 1], &sc->rd[used_registers - i], 0);
+			PfSub(sc, &sc->rd[used_registers - i - 1], &sc->rd[used_registers - i - 1], &sc->temp);
 
-			PfMul(sc, &sc->ud[sc->registers_per_thread - i - 1], &sc->ud[sc->registers_per_thread - i - 1], &sc->ud[sc->registers_per_thread - i], 0);
-			PfMovNeg(sc, &sc->ud[sc->registers_per_thread - i - 1], &sc->ud[sc->registers_per_thread - i - 1]);
+			PfMul(sc, &sc->ud[used_registers - i - 1], &sc->ud[used_registers - i - 1], &sc->ud[used_registers - i], 0);
+			PfMovNeg(sc, &sc->ud[used_registers - i - 1], &sc->ud[used_registers - i - 1]);
 		}
 	}
 	if (!sc->ld_zero) {
-		PfSwapContainers(sc, &sc->rd[0], &sc->rd[sc->registers_per_thread - 1]);
-		PfSwapContainers(sc, &sc->ld[0], &sc->ld[sc->registers_per_thread - 1]);
+		PfSwapContainers(sc, &sc->rd[0], &sc->rd[used_registers - 1]);
+		PfSwapContainers(sc, &sc->ld[0], &sc->ld[used_registers - 1]);
 	}
 
 	int64_t temp_registers_per_thread = sc->registers_per_thread;
@@ -1365,12 +1468,12 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	sc->scaleC.type = temp_scaleC_type;
 
 	if (!sc->ld_zero) {
-		PfSwapContainers(sc, &sc->rd[0], &sc->rd[sc->registers_per_thread - 1]);
-		PfSwapContainers(sc, &sc->ld[0], &sc->ld[sc->registers_per_thread - 1]);
+		PfSwapContainers(sc, &sc->rd[0], &sc->rd[used_registers - 1]);
+		PfSwapContainers(sc, &sc->ld[0], &sc->ld[used_registers - 1]);
 	}
 
 	if (!sc->ld_zero) {
-		PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[sc->registers_per_thread - 1], 1);
+		PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[used_registers - 1], 1);
 	}
 
 	if (!sc->ud_zero) {
@@ -1385,14 +1488,14 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		temp_int.data.i = sc->warpSize - 1;
 		PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 	}
-	for (uint64_t i = 1; i < sc->registers_per_thread; i++) {
+	for (uint64_t i = 1; i < used_registers; i++) {
 		if (!sc->ld_zero) {
 			PfMul(sc, &sc->temp2, &sc->ld[i-1], &sc->temp, 0);
 			PfSub(sc, &sc->rd[i-1], &sc->rd[i-1], &sc->temp2);
 		}
 		if (!sc->ud_zero) {
-			PfMul(sc, &sc->temp2, &sc->ud[sc->registers_per_thread - i], &sc->temp, 0);
-			PfSub(sc, &sc->rd[sc->registers_per_thread - i], &sc->rd[sc->registers_per_thread - i], &sc->temp2);
+			PfMul(sc, &sc->temp2, &sc->ud[used_registers - i], &sc->temp, 0);
+			PfSub(sc, &sc->rd[used_registers - i], &sc->rd[used_registers - i], &sc->temp2);
 		}
 	}
 	if (!sc->ld_zero) {
@@ -1401,74 +1504,9 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	if (!sc->ud_zero) {
 		PfIf_end(sc);
 	}
-	/*temp_int.data.i = sc->warpSize * sc->registers_per_thread;
+	/*temp_int.data.i = sc->warpSize * used_registers;
 	PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 	PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);*/
-	if (maxSharedMemPCRIteration > 0) {
-		temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-		PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
-		PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
-	}
-	else {
-		temp_int.data.i = sc->registers_per_thread;
-		PfMul(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int, 0);
-	}
-	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if (i > 0) {
-			temp_int.data.i = sc->num_threads / sc->warpSize;
-			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
-		}
-		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
-			appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
-		}
-		else{
-			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-			temp_int.data.i = shared_stride;
-			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-
-			appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
-		}
-		PfIf_end(sc);
-	}
-	appendBarrierPfSolve(sc);
-
-	/*temp_int.data.i = sc->num_threads / sc->warpSize;
-	PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
-	PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);*/
-	if (maxSharedMemPCRIteration > 0) {
-		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-	}
-	else
-		PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
-
-	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if (i > 0) {
-			temp_int.data.i = sc->warpSize;
-			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
-		}
-		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-		if (shared_stride == (sc->num_threads / sc->warpSize * sc->registers_per_thread)){
-			appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
-		}
-		else{
-			temp_int.data.i = sc->num_threads / sc->warpSize * sc->registers_per_thread;
-			PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
-			PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
-			temp_int.data.i = shared_stride;
-			PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
-			PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-
-			appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
-		}
-		PfIf_end(sc);
-	}
-	appendBarrierPfSolve(sc);
 
 	if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type > 100)) {
 		temp_int.data.i = 0;

@@ -273,13 +273,8 @@ static inline void appendPushConstants_jw(PfSolveSpecializationConstantsLayout* 
 #elif(VKFFT_BACKEND==1)
 	sc->tempLen = sprintf(sc->tempStr, "	}PushConsts;\n");
 	PfAppendLine(sc);
-	sc->tempLen = sprintf(sc->tempStr, "	__constant__ PushConsts consts;\n");
-	PfAppendLine(sc);
 #elif(VKFFT_BACKEND==2)
 	sc->tempLen = sprintf(sc->tempStr, "	}PushConsts;\n");
-	PfAppendLine(sc);
-
-	sc->tempLen = sprintf(sc->tempStr, "	__constant__ PushConsts consts;\n");
 	PfAppendLine(sc);
 
 #elif(VKFFT_BACKEND==3)

@@ -2108,6 +2108,18 @@ double mu(double n, double alpha, double beta) {
 double nu(double n, double alpha, double beta) {
 	return sqrt(2 * (n + 1) * (n + alpha + 1) / (2 * n + alpha + beta + 1) / (2 * n + alpha + beta + 2));
 }
+int reorder_i(int i, int M_size, int warpSize, int used_registers) {
+	int ret = i / used_registers;
+	if ((i % used_registers) < (M_size% used_registers)) {
+		ret += (i % used_registers) * ((M_size + used_registers - 1) / used_registers);
+	}
+	else
+	{
+		ret += (M_size% used_registers) * ((M_size + used_registers - 1) / used_registers);
+		ret += ((i % used_registers) - (M_size % used_registers)) * (M_size / used_registers);
+	}
+	return ret;
+}
 PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output, FILE* output, uint64_t isCompilerInitialized)
 {
 	PfSolveResult resFFT = PFSOLVE_SUCCESS;
@@ -2231,6 +2243,11 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			int l = 1;// 2 * configuration.size[0];
 			double* buffer_input_matrix = (double*)malloc(bufferSolveSize);
 			double* buffer_input_matrix_gpu = (double*)malloc(bufferSolveSize);
+
+			int64_t tempM = configuration.size[0];
+			if (!configuration.upperBanded) tempM += (configuration.numConsecutiveJWIterations-1);
+			int used_registers = (uint64_t)ceil(tempM / 32.0);
+
 			if (configuration.upperBanded != 1) {
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
 					buffer_input_matrix[i] = 1;
@@ -2245,12 +2262,12 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			else {
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
 					buffer_input_matrix[configuration.size[0] + i] = 1;
-					buffer_input_matrix_gpu[i] = 1.0 / mu(i, -0.5, l - 0.5 + 1);;
-					//printf("%f\n", buffer_input_matrix_gpu[i]);.
+					buffer_input_matrix_gpu[reorder_i(i, configuration.size[0], 32, used_registers)] = 1.0 / mu(i, -0.5, l - 0.5 + 1);
+					//printf("%d %d\n", i, reorder_i(i,configuration.size[0], 32, used_registers));
 				}
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
 					buffer_input_matrix[i] = 0;
-					buffer_input_matrix_gpu[configuration.size[0] + i] = 0;
+					buffer_input_matrix_gpu[configuration.size[0] + reorder_i(i,configuration.size[0], 32, used_registers)] = 0;
 				}
 			}
 			if (configuration.upperBanded != 1) {
@@ -2268,7 +2285,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 			else {
 				for (uint64_t i = 0; i < 1 * configuration.size[0]-1; i++) {
 					buffer_input_matrix[3 * configuration.size[0] + i] = nu(i, -0.5, l - 0.5 + 1);// / mu(i, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
-					buffer_input_matrix_gpu[2 * configuration.size[0] + i+1] = nu(i, -0.5, l - 0.5 + 1) / mu(i + 1, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
+					buffer_input_matrix_gpu[2 * configuration.size[0] + reorder_i(i + 1, configuration.size[0], 32, used_registers)] = nu(i, -0.5, l - 0.5 + 1) / mu(i + 1, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 					//printf("%f %f\n", buffer_input_matrix[3 * configuration.size[0] + i], buffer_input_matrix_gpu[1 + i]);
 				}
 				for (uint64_t i = 0; i < 1 * configuration.size[0]; i++) {

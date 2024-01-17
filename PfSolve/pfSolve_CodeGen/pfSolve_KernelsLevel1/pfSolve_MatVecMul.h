@@ -25,6 +25,98 @@
 #include "pfSolve_CodeGen/pfSolve_StringManagement/pfSolve_StringManager.h"
 #include "pfSolve_CodeGen/pfSolve_KernelsLevel0/pfSolve_MemoryManagement/pfSolve_MemoryTransfers/pfSolve_Transfers.h"
 
+static inline void appendMatVecMul_ParallelThomas(PfSolveSpecializationConstantsLayout* sc) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	/*
+		Kernel can have two input types - from registers or from shared memory. In second case, a copy of state in registers is created.
+	*/
+	PfContainer temp_int = {};
+	temp_int.type = 31;
+	PfContainer temp_int1 = {};
+	temp_int1.type = 31;
+	PfContainer temp_double = {};
+	temp_double.type = 32;
+	
+	/*if (sc->read_SharedToRegisters) {
+		appendBarrier(sc);
+		
+		appendSharedToRegisters_init(sc);
+		
+	}
+	if (sc->read_RegistersToShared) {
+		appendRegistersToShared_mat(sc);
+		
+	}*/
+	//appendBarrier(sc);
+	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+		//PfPrintReg(sc, &sc->gl_LocalInvocationID_x, &sc->temp1);
+	}
+	uint64_t used_registers = sc->registers_per_thread;// (sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
+	if (!sc->ud_zero){
+		PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[0], 1);
+	}
+	if (!sc->ld_zero){
+		PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[used_registers-1], 1);
+	}
+	for (uint64_t i = 0; i < used_registers; i++) {
+		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
+
+		*/
+		if (!sc->ud_zero) {
+			PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->md[i], 0);
+			if (i == (used_registers-1)) {
+				PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
+				PfAdd(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
+				/*temp_int.data.i = sc->M_size.data.i - (used_registers - 1) * sc->warpSize;
+				if (temp_int.data.i > 0) {
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+				}
+
+				PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
+				PfAdd(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
+				//	sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " += ud_%" PRIu64 " * temp_0;\n", i, i);
+
+				if (temp_int.data.i > 0) {
+					PfIf_end(sc);
+				}*/
+			}
+			else {
+				PfMul(sc, &sc->temp1, &sc->rd[i+1], &sc->ud[i], 0);
+				PfAdd(sc, &sc->rd[i], &sc->rd[i], &sc->temp1);
+			}
+		}
+		if (!sc->ld_zero) {
+			PfMul(sc, &sc->temp1, &sc->rd[i], &sc->md[i], 0);
+			if (i == 0) {
+				PfMul(sc, &sc->temp, &sc->temp, &sc->ld[i], 0);
+				PfAdd(sc, &sc->md[i], &sc->temp1, &sc->temp);
+				/*temp_int.data.i = 0;
+				if (temp_int.data.i > 0) {
+					PfIf_gt_start(sc, &sc->warpInvocationID, &temp_int);
+				}
+				PfMul(sc, &sc->temp, &sc->temp, &sc->ld[i], 0);
+				PfAdd(sc, &sc->md[i], &sc->temp1, &sc->temp);
+				
+				if (temp_int.data.i > 0) {
+					PfIf_end(sc);
+				}*/
+			}		
+			else {
+				PfMul(sc, &sc->temp, &sc->rd[i-1], &sc->ld[i], 0);
+				PfMov(sc, &sc->rd[i - 1], &sc->md[i-1]);
+				PfAdd(sc, &sc->md[i], &sc->temp1, &sc->temp);
+			}
+			if (i == used_registers-1) {
+				PfMov(sc, &sc->rd[i], &sc->md[i]);
+			}
+		}
+		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
+
+		*/
+	}
+	return;
+}
+
 static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	/*

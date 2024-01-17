@@ -88,6 +88,8 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 
 	sc->readToRegisters = 1;
 	appendReadWrite_rd(sc, 0);
+	if(sc->useParallelThomas)
+		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
 
 	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
@@ -157,7 +159,10 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		//appendGlobalToShared_all(sc);
 
 		if (sc->performMatVecMul) {
-			appendGlobalToRegisters_mat(sc);
+			if(sc->useParallelThomas)
+				appendGlobalToRegisters_mat_ParallelThomas(sc);
+			else
+				appendGlobalToRegisters_mat(sc);
 			//sc->read_SharedToRegisters = 0;
 			//sc->write_RegistersToShared=0;
 			if (sc->performTriSolve == 2)
@@ -165,7 +170,11 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				sc->ud_zero = 1;
 				sc->ld_zero = 1;
 			}
-			appendMatVecMul(sc);
+			if(sc->useParallelThomas)
+				appendMatVecMul_ParallelThomas(sc);
+			else
+				appendMatVecMul(sc);
+
 			//sc->read_SharedToRegisters = 0;
 			//sc->write_RegistersToShared=0;
 		}
@@ -239,7 +248,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		if (sc->performTriSolve) {
 			if (sc->performTriSolve != 2)
 			{
-				appendGlobalToRegisters_mat(sc);
+				appendGlobalToRegisters_mat_ParallelThomas(sc);
 			}
 
 			//sc->read_SharedToRegisters = 0;
@@ -265,6 +274,8 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		}
 	}
 
+	if(sc->useParallelThomas)
+		appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc);
 	//int i =0;
 	//if((i==0)){
 	//							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);

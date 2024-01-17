@@ -1528,6 +1528,70 @@ static inline void appendWriteDataPfSolve(PfSolveSpecializationConstantsLayout* 
 	return;
 }
 
+static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializationConstantsLayout* sc) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	PfContainer temp_int = {};
+	temp_int.type = 31;
+	PfContainer temp_int1 = {};
+	temp_int1.type = 31;
+	uint64_t used_registers = (sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
+	
+	PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
+	for (uint64_t i = 0; i < used_registers; i++) {
+		uint64_t activeThreads = (sc->M_size.data.i + used_registers - 1) / used_registers;
+
+		if (((activeThreads - 1) * used_registers + i) >= sc->M_size.data.i) activeThreads--;
+
+		temp_int.data.i = activeThreads;
+		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+
+		if (!sc->md_zero) {
+			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_md_global);
+			if(sc->useMultipleInputBuffers)
+				appendGlobalToRegistersMultipleBuffers(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
+			else
+				appendGlobalToRegisters(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
+
+		}
+		if (!sc->ld_zero) {
+			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_ld_global);
+			temp_int.data.i = 1;
+            //PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+			if(sc->useMultipleInputBuffers)
+				appendGlobalToRegistersMultipleBuffers(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
+			else
+				appendGlobalToRegisters(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
+		}
+
+		if (!sc->ud_zero) {
+			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_ud_global);
+			temp_int.data.i = 1;
+            //PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+			if(sc->useMultipleInputBuffers)
+				appendGlobalToRegistersMultipleBuffers(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
+			else
+				appendGlobalToRegisters(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
+		}
+		
+		PfIf_else(sc);
+
+		if (!sc->md_zero) {
+			PfSetToZero(sc, &sc->md[i]);
+		}
+		if (!sc->ld_zero) {
+			PfSetToZero(sc, &sc->ld[i]);
+		}
+		if (!sc->ud_zero) {
+			PfSetToZero(sc, &sc->ud[i]);
+		}
+
+		PfIf_end(sc);
+		temp_int.data.i = activeThreads;
+		PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+	}
+	return;
+}
+
 static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLayout* sc) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	PfContainer temp_int = {};
