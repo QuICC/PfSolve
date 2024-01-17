@@ -921,6 +921,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 	uint64_t used_registers = sc->registers_per_thread;// (sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
 	
 	int64_t shared_stride = sc->num_threads / sc->warpSize * used_registers + 1;
+
+	if (sc->num_threads == sc->warpSize) {
+		shared_stride = 2*(used_registers/2) + 1;
+	}
 	if (maxSharedMemPCRIteration > 0) {
 		temp_int.data.i = sc->warpSize * used_registers;
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
