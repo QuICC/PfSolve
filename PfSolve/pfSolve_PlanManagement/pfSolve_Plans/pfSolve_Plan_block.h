@@ -124,12 +124,12 @@ static inline PfSolveResult PfSolve_Plan_block(PfSolveApplication* app, PfSolveP
 
 
 	axis->specializationConstants.registers_per_thread = (int)ceil(app->configuration.size[0] / (double)app->configuration.aimThreads);
-
-	axis->axisBlock[0] = (uint64_t)ceil(app->configuration.size[0]/ (double)axis->specializationConstants.registers_per_thread);
+	if (axis->specializationConstants.registers_per_thread  > 4) axis->specializationConstants.registers_per_thread = 4;
+	axis->axisBlock[0] = app->configuration.aimThreads;
 	axis->axisBlock[1] = 1;
 	axis->axisBlock[2] = 1;
 	axis->specializationConstants.num_threads = axis->axisBlock[0] * axis->axisBlock[1] * axis->axisBlock[2];
-	uint64_t tempSize[3] = { (uint64_t)ceil((axis->specializationConstants.M_size.data.i) / (double)(axis->axisBlock[0] * axis->axisBlock[1] * axis->specializationConstants.registers_per_thread)), 1, 1 };
+	uint64_t tempSize[3] = { (uint64_t)ceil(app->configuration.size[0]*app->configuration.size[1] / (double)(axis->axisBlock[0] * axis->specializationConstants.registers_per_thread)), 1, 1 };
 
 
 	if (tempSize[0] > app->configuration.maxComputeWorkGroupCount[0]) axis->specializationConstants.performWorkGroupShift[0] = 1;

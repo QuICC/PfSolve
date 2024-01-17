@@ -1262,6 +1262,7 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 	if (inputLaunchConfiguration.maxThreadsNum != 0)	app->configuration.maxThreadsNum = inputLaunchConfiguration.maxThreadsNum;
 	if (inputLaunchConfiguration.coalescedMemory != 0)	app->configuration.coalescedMemory = inputLaunchConfiguration.coalescedMemory;
 	app->configuration.aimThreads = app->configuration.warpSize;
+	if (app->configuration.block) app->configuration.aimThreads = 128;
 	if (inputLaunchConfiguration.aimThreads != 0)	app->configuration.aimThreads = inputLaunchConfiguration.aimThreads;
 	app->configuration.numSharedBanks = 32;
 	if (inputLaunchConfiguration.numSharedBanks != 0)	app->configuration.numSharedBanks = inputLaunchConfiguration.numSharedBanks;
