@@ -85,13 +85,13 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		sc->offset_res_global.type = 31;
 		sc->offset_res_global.data.i = sc->offsetSolution.data.i;
 	}
-/*
+
 	sc->readToRegisters = 1;
 	appendReadWrite_rd(sc, 0);
 	if(sc->useParallelThomas)
 		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
-*/
-	for (int i = 0; i < 0*sc->numConsecutiveJWIterations; i++) {
+
+	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
 		sc->M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)sc->M_size.data.i)));
 		sc->inputBufferId = i;
@@ -159,10 +159,10 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		//appendGlobalToShared_all(sc);
 
 		if (sc->performMatVecMul) {
-			/*if(sc->useParallelThomas)
+			if(sc->useParallelThomas)
 				appendGlobalToRegisters_mat_ParallelThomas(sc);
 			else
-				appendGlobalToRegisters_mat(sc);*/
+				appendGlobalToRegisters_mat(sc);
 			//sc->read_SharedToRegisters = 0;
 			//sc->write_RegistersToShared=0;
 			if (sc->performTriSolve == 2)
@@ -248,14 +248,14 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		if (sc->performTriSolve) {
 			if (sc->performTriSolve != 2)
 			{
-				//appendGlobalToRegisters_mat_ParallelThomas(sc);
+				appendGlobalToRegisters_mat_ParallelThomas(sc);
 			}
 
 			//sc->read_SharedToRegisters = 0;
-			/*if(sc->useParallelThomas)
+			if(sc->useParallelThomas)
 				appendTridiagonalSolve_ParallelThomas(sc);
 			else
-				appendTridiagonalSolve_PCR(sc);*/
+				appendTridiagonalSolve_PCR(sc);
 
 			//sc->read_SharedToRegisters = 0;
 		}
@@ -273,7 +273,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			}
 		}
 	}
-/*
+
 	if(sc->useParallelThomas)
 		appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc);
 	//int i =0;
@@ -284,7 +284,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	//						}
 	sc->writeFromRegisters = 1;
 	appendReadWrite_rd(sc, 1);
-*/
+
 	PfDeallocateContainer(sc, &sc->offset_res_global);
 
 	
