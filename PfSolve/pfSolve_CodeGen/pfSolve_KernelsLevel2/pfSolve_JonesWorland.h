@@ -85,12 +85,12 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		sc->offset_res_global.type = 31;
 		sc->offset_res_global.data.i = sc->offsetSolution.data.i;
 	}
-
+/*
 	sc->readToRegisters = 1;
 	appendReadWrite_rd(sc, 0);
 	if(sc->useParallelThomas)
 		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
-
+*/
 	for (int i = 0; i < 0*sc->numConsecutiveJWIterations; i++) {
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
 		sc->M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)sc->M_size.data.i)));
@@ -273,7 +273,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			}
 		}
 	}
-
+/*
 	if(sc->useParallelThomas)
 		appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc);
 	//int i =0;
@@ -284,7 +284,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	//						}
 	sc->writeFromRegisters = 1;
 	appendReadWrite_rd(sc, 1);
-
+*/
 	PfDeallocateContainer(sc, &sc->offset_res_global);
 
 	
