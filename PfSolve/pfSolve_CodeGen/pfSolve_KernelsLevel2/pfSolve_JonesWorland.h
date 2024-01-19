@@ -91,7 +91,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	if(sc->useParallelThomas)
 		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
 
-	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
+	for (int i = 0; i < 0*sc->numConsecutiveJWIterations; i++) {
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
 		sc->M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)sc->M_size.data.i)));
 		sc->inputBufferId = i;
