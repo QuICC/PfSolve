@@ -78,7 +78,7 @@ static inline void printDebugInformation(PfSolveApplication* app, PfSolveAxis* a
 }
 
 static inline PfSolveResult PfSolveAppend(PfSolveApplication* app, int inverse, PfSolveLaunchParams* launchParams) {
-	return;
+	return PFSOLVE_SUCCESS;
 	PfSolveResult res = PFSOLVE_SUCCESS;
 #if(VKFFT_BACKEND==0)
 	app->configuration.commandBuffer = launchParams->commandBuffer;
