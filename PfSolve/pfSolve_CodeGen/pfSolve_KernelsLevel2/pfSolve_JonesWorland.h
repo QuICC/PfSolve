@@ -159,10 +159,10 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		//appendGlobalToShared_all(sc);
 
 		if (sc->performMatVecMul) {
-			if(sc->useParallelThomas)
+			/*if(sc->useParallelThomas)
 				appendGlobalToRegisters_mat_ParallelThomas(sc);
 			else
-				appendGlobalToRegisters_mat(sc);
+				appendGlobalToRegisters_mat(sc);*/
 			//sc->read_SharedToRegisters = 0;
 			//sc->write_RegistersToShared=0;
 			if (sc->performTriSolve == 2)
@@ -248,7 +248,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		if (sc->performTriSolve) {
 			if (sc->performTriSolve != 2)
 			{
-				appendGlobalToRegisters_mat_ParallelThomas(sc);
+				//appendGlobalToRegisters_mat_ParallelThomas(sc);
 			}
 
 			//sc->read_SharedToRegisters = 0;
