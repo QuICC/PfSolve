@@ -117,10 +117,8 @@ static inline PfSolveResult PfSolveAppend(PfSolveApplication* app, int inverse, 
 	}
 	if(app->configuration.LDA)
 		dispatchBlock[0] = app->configuration.size[1];
-	if (app->configuration.block){
-		return PFSOLVE_SUCCESS;
+	if (app->configuration.block)
 		dispatchBlock[0] = (uint64_t)ceil(app->configuration.size[0] * app->configuration.size[1] / (double)(app->localFFTPlan->axes[0]->axisBlock[0] * app->localFFTPlan->axes[0]->specializationConstants.registers_per_thread));
-	}
 	/*if(app->configuration.JW_sequential)
 		std::cerr << "JW "<< std::endl;
 	if(app->configuration.scaleType)
