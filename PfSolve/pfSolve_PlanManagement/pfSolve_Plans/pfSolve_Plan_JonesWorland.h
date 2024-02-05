@@ -53,7 +53,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) {
 		axis->specializationConstants.precision = 3;
 		axis->specializationConstants.complexSize = 32;
-		axis->specializationConstants.storeSharedComplexComponentsSeparately = 1;
+		//axis->specializationConstants.storeSharedComplexComponentsSeparately = 1;
 	}
 	else {
 		if (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory) {
@@ -151,14 +151,13 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.usedSharedMemory.type = 31;
 	if ((axis->specializationConstants.useParallelThomas) && (numWarps == 1)){
 		int64_t shared_stride = 2*(axis->specializationConstants.registers_per_thread / 2) + 1;
-		axis->specializationConstants.usedSharedMemory.data.i = (shared_stride * axis->specializationConstants.warpSize) * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
+		axis->specializationConstants.usedSharedMemory.data.i = (shared_stride * axis->specializationConstants.warpSize) * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	}
 	else if (axis->specializationConstants.useParallelThomas) {
-		axis->specializationConstants.usedSharedMemory.data.i = ((axis->specializationConstants.num_threads / axis->specializationConstants.warpSize * axis->specializationConstants.registers_per_thread + 1) * axis->specializationConstants.warpSize) * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
+		axis->specializationConstants.usedSharedMemory.data.i = ((axis->specializationConstants.num_threads / axis->specializationConstants.warpSize * axis->specializationConstants.registers_per_thread + 1) * axis->specializationConstants.warpSize) * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	}
 	else
-		axis->specializationConstants.usedSharedMemory.data.i = (axis->specializationConstants.num_threads == axis->specializationConstants.warpSize) ? 0 : ((numWarps+1) * axis->specializationConstants.warpSize) * axis->specializationConstants.registers_per_thread * axis->specializationConstants.outputNumberByteSize;// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
-
+		axis->specializationConstants.usedSharedMemory.data.i = (axis->specializationConstants.num_threads == axis->specializationConstants.warpSize) ? 0 : ((numWarps+1) * axis->specializationConstants.warpSize) * axis->specializationConstants.registers_per_thread * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	//configure strides
 
 

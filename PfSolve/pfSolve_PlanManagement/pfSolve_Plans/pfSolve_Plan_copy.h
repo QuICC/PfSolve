@@ -50,7 +50,7 @@ static inline PfSolveResult PfSolve_Plan_copy(PfSolveApplication* app, PfSolvePl
 	if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) {
 		axis->specializationConstants.precision = 3;
 		axis->specializationConstants.complexSize = 32;
-		axis->specializationConstants.storeSharedComplexComponentsSeparately = 1;
+		//axis->specializationConstants.storeSharedComplexComponentsSeparately = 1;
 	}
 	else {
 		if (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory) {

@@ -52,7 +52,7 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 	if (app->configuration.quadDoubleDoublePrecision || app->configuration.quadDoubleDoublePrecisionDoubleMemory) {
 		axis->specializationConstants.precision = 3;
 		axis->specializationConstants.complexSize = 32;
-		axis->specializationConstants.storeSharedComplexComponentsSeparately = 1;
+		//axis->specializationConstants.storeSharedComplexComponentsSeparately = 1;
 	}
 	else {
 		if (app->configuration.doublePrecision || app->configuration.doublePrecisionFloatMemory) {
@@ -123,10 +123,8 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 
 
 	axis->specializationConstants.usedSharedMemory.type = 31;
-	axis->specializationConstants.usedSharedMemory.data.i = axis->specializationConstants.size[0].data.i * axis->specializationConstants.size[1].data.i * sizeof(float);
-    if(app->configuration.doublePrecision)
-            axis->specializationConstants.usedSharedMemory.data.i *= 2;
-	//axis->specializationConstants.registers_per_thread = 1;
+	axis->specializationConstants.usedSharedMemory.data.i = axis->specializationConstants.size[0].data.i * axis->specializationConstants.size[1].data.i * (axis->specializationConstants.complexSize/2);
+    //axis->specializationConstants.registers_per_thread = 1;
 
 	//axis->axisBlock[0] = axis->specializationConstants.size[0].data.i;// (axis->specializationConstants.size[1] > app->configuration.aimThreads) ? app->configuration.aimThreads : axis->specializationConstants.size[1];
 	axis->specializationConstants.registers_per_thread = (int)ceil(app->configuration.size[0] / (double)app->configuration.aimThreads);
