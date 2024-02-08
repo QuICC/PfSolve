@@ -1534,6 +1534,8 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 	temp_int.type = 31;
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
+	PfContainer temp_double = {};
+	temp_double.type = 32;
 	uint64_t used_registers = (sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
 	
 	PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
@@ -1547,30 +1549,77 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 
 		if (!sc->md_zero) {
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_md_global);
-			if(sc->useMultipleInputBuffers)
+			/*if(sc->useMultipleInputBuffers)
 				appendGlobalToRegistersMultipleBuffers(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
 			else
-				appendGlobalToRegisters(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
+				appendGlobalToRegisters(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);*/
+			temp_double.data.d = (pfLD)sc->M_size.data.i + ((double)rand()) / RAND_MAX / 2;
+			PfAdd(sc, &sc->md[i],  &sc->inoutID, &temp_double);
+			temp_double.data.d = 0.5l;
+			PfAdd(sc, &sc->temp, &sc->md[i], &temp_double);
+			PfMul(sc, &sc->md[i], &sc->md[i], &sc->temp, 0);
 
+			PfAdd(sc, &sc->temp, &sc->temp, &sc->inoutID);
+			temp_double.data.d = 1.0l;
+			PfAdd(sc, &sc->temp1, &sc->temp, &temp_double);
+			PfMul(sc, &sc->temp, &sc->temp1, &sc->temp, 0);
+			PfDiv(sc, &sc->md[i], &sc->md[i], &sc->temp);
+
+			temp_double.data.d = 2.0l;
+
+			PfMul(sc, &sc->md[i], &sc->md[i], &temp_double, 0);
+			PfSqrt(sc, &sc->md[i], &sc->md[i]);
 		}
 		if (!sc->ld_zero) {
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_ld_global);
 			temp_int.data.i = 1;
             //PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-			if(sc->useMultipleInputBuffers)
+			/*if(sc->useMultipleInputBuffers)
 				appendGlobalToRegistersMultipleBuffers(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
 			else
-				appendGlobalToRegisters(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);
+				appendGlobalToRegisters(sc, &sc->ld[i], &sc->inputsStruct, &sc->tempInt);*/
+			temp_double.data.d = (pfLD)sc->M_size.data.i + ((double)rand()) / RAND_MAX / 2;
+			PfAdd(sc, &sc->md[i],  &sc->inoutID, &temp_double);
+			temp_double.data.d = 0.5l;
+			PfAdd(sc, &sc->temp, &sc->md[i], &temp_double);
+			PfMul(sc, &sc->md[i], &sc->md[i], &sc->temp, 0);
+
+			PfAdd(sc, &sc->temp, &sc->temp, &sc->inoutID);
+			temp_double.data.d = 2.0l;
+			PfAdd(sc, &sc->temp1, &sc->temp, &temp_double);
+			PfMul(sc, &sc->temp, &sc->temp1, &sc->temp, 0);
+			PfDiv(sc, &sc->md[i], &sc->md[i], &sc->temp);
+
+			temp_double.data.d = 2.0l;
+
+			PfMul(sc, &sc->md[i], &sc->md[i], &temp_double, 0);
+			PfSqrt(sc, &sc->md[i], &sc->md[i]);
 		}
 
 		if (!sc->ud_zero) {
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_ud_global);
 			temp_int.data.i = 1;
             //PfAdd(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-			if(sc->useMultipleInputBuffers)
+			/*if(sc->useMultipleInputBuffers)
 				appendGlobalToRegistersMultipleBuffers(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
 			else
-				appendGlobalToRegisters(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);
+				appendGlobalToRegisters(sc, &sc->ud[i], &sc->inputsStruct, &sc->tempInt);*/
+			temp_double.data.d = (pfLD)sc->M_size.data.i + ((double)rand()) / RAND_MAX / 2;
+			PfAdd(sc, &sc->md[i],  &sc->inoutID, &temp_double);
+			temp_double.data.d = 0.5l;
+			PfAdd(sc, &sc->temp, &sc->md[i], &temp_double);
+			PfMul(sc, &sc->md[i], &sc->md[i], &sc->temp, 0);
+
+			PfAdd(sc, &sc->temp, &sc->temp, &sc->inoutID);
+			temp_double.data.d = 2.0l;
+			PfAdd(sc, &sc->temp1, &sc->temp, &temp_double);
+			PfMul(sc, &sc->temp, &sc->temp1, &sc->temp, 0);
+			PfDiv(sc, &sc->md[i], &sc->md[i], &sc->temp);
+
+			temp_double.data.d = 2.0l;
+
+			PfMul(sc, &sc->md[i], &sc->md[i], &temp_double, 0);
+			PfSqrt(sc, &sc->md[i], &sc->md[i]);
 		}
 		
 		PfIf_else(sc);
