@@ -33,19 +33,19 @@ The testing suite and its CMakeLists is almost entirely based on the VkFFT test 
 
 ## Description of type bitfields (in decimal)
 
-block%10        =   1 or other - all operations are done in real number format
-                    2 - read real part of complex number, write it as real number
-                    3 - read imaginary part of complex number, write it as real number
-                    4 - read complex number in strided format, write in common complex format (XXIIXXII - XIXIXIXI)
-                    5 - read real number, write it in real part of complex number
-                    6 - read real number, write it in imaginary part of complex number
-                    7 - read complex number in common complex format, write complex number in strided format for batched polynomial processing (XIXIXIXI - XXIIXXII)
-(block/10) % 10 =   2 - add the results of the operator to the value in the outputBuffer
-(block/100) % 10=   1 - ScaleC operator
-                    2 - ScaleD operator
-                    3 - ScaleSphLaplA operator
-                    4 - ScaleSphLaplB operator
+block%10        =   1 or other - all operations are done in real number format \
+                    2 - read real part of complex number, write it as real number \
+                    3 - read imaginary part of complex number, write it as real number \
+                    4 - read complex number in strided format, write in packed complex format (XXIIXXII - XIXIXIXI) \
+                    5 - read real number, write it in real part of complex number \
+                    6 - read real number, write it in imaginary part of complex number \
+                    7 - read complex number in packed complex format, write complex number in strided format for batched polynomial processing (XIXIXIXI - XXIIXXII) \
+(block/10) % 10 =   2 - add the results of the operator to the value in the outputBuffer \
+(block/100) % 10=   1 - ScaleC operator \
+                    2 - ScaleD operator \
+                    3 - ScaleSphLaplA operator \
+                    4 - ScaleSphLaplB operator \
 
-jw_type%10      =   1 - do not perform Tridiagonal Solve in kernel
-                    2 - do not perform MatVecMul in kernel (no used, use 3)
-                    3 - special version where MatVecMul matrix is diagonal (used in applyTriSolve - there MatVecMul is used to get identity values in bidiagonal matrix diagonal) 
+jw_type%10      =   1 - do not perform Tridiagonal Solve in kernel \
+                    2 - do not perform MatVecMul in kernel (not used, use 3) \
+                    3 - special version where MatVecMul matrix is diagonal (used in applyTriSolve - there MatVecMul is used to get identity values in bidiagonal matrix diagonal) \
