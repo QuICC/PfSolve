@@ -96,6 +96,7 @@ typedef union PfData PfData;
 #define JWT_DISABLE_TRIDIAGONAL_SOLVE 1
 #define JWT_DISABLE_MATVECMUL_SOLVE 2
 #define JWT_DIAGONAL_MATVECMUL 3
+#define JWT_USE_PARALLEL_THOMAS 10
 
 typedef union PfData {
 	pfINT i; // int

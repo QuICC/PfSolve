@@ -49,3 +49,5 @@ block%10        =   1 or other - all operations are done in real number format \
 jw_type%10      =   1 - do not perform Tridiagonal Solve in kernel \
                     2 - do not perform MatVecMul in kernel (not used, use 3) \
                     3 - special version where MatVecMul matrix is diagonal (used in applyTriSolve - there MatVecMul is used to get identity values in bidiagonal matrix diagonal) \
+
+(jw_type/10) % 10=  1 - use parallel Thomas algorithm 
