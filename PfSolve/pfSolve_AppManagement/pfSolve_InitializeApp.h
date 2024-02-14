@@ -1482,9 +1482,7 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	FILE* kernelCache;
 	uint64_t str_len;
 	char fname[300];
-	int myrank = 10;
-	//MPI_Comm_rank(MPI_COMM_WORLD, &myrank);
-
+	inputLaunchConfiguration.disableCaching = 1;
 	//if (app->configuration.compute_flux_D) {
 	//	sprintf(fname, "compute_flux_D_size_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "_logicblock_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.size[2], app->configuration.logicBlock[0], app->configuration.logicBlock[1], app->configuration.logicBlock[2]);
 	//}
