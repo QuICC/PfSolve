@@ -1534,7 +1534,7 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 	temp_int.type = 31;
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
-	uint64_t used_registers = (sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
+	uint64_t used_registers = sc->registers_per_thread;//(sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
 	
 	PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
 	for (uint64_t i = 0; i < used_registers; i++) {
