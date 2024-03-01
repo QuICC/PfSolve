@@ -63,7 +63,8 @@ static inline void appendMatVecMul_ParallelThomas(PfSolveSpecializationConstants
 
 		*/
 		if (!sc->ud_zero) {
-			PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->md[i], 0);
+			if ((sc->inputBufferId == 0) || (sc->numConsecutiveJWIterations == 1))
+				PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->md[i], 0);
 			if (i == (used_registers-1)) {
 				PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
 				PfAdd(sc, &sc->rd[i], &sc->rd[i], &sc->temp);
@@ -86,7 +87,10 @@ static inline void appendMatVecMul_ParallelThomas(PfSolveSpecializationConstants
 			}
 		}
 		if (!sc->ld_zero) {
-			PfMul(sc, &sc->temp1, &sc->rd[i], &sc->md[i], 0);
+			if ((sc->inputBufferId == (sc->numConsecutiveJWIterations-1)) || (sc->numConsecutiveJWIterations == 1))
+				PfMul(sc, &sc->temp1, &sc->rd[i], &sc->md[i], 0);
+			else 
+				PfMov(sc, &sc->temp1, &sc->rd[i]);
 			if (i == 0) {
 				PfMul(sc, &sc->temp, &sc->temp, &sc->ld[i], 0);
 				PfAdd(sc, &sc->md[i], &sc->temp1, &sc->temp);

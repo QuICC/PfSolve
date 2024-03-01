@@ -1545,7 +1545,7 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 		temp_int.data.i = activeThreads;
 		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
-		if (!sc->md_zero) {
+		if ((!sc->md_zero) && (((sc->inputBufferId == 0) && (!sc->ud_zero)) || ((sc->inputBufferId == (sc->numConsecutiveJWIterations-1)) && (!sc->ld_zero)) || (sc->numConsecutiveJWIterations == 1))) {
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_md_global);
 			if(sc->useMultipleInputBuffers)
 				appendGlobalToRegistersMultipleBuffers(sc, &sc->md[i], &sc->inputsStruct, &sc->tempInt);
