@@ -1427,10 +1427,10 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		
 	}
 	
-	uint64_t activeThreads = (sc->M_size.data.i + used_registers - 1) / used_registers;
+	//uint64_t activeThreads = (sc->M_size.data.i + used_registers - 1) / used_registers;
 
-	temp_int.data.i = activeThreads;
-	PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+	//temp_int.data.i = activeThreads;
+	//PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 	for (uint64_t i = 1; i < used_registers; i++) {
 		if (!sc->ld_zero) {
 			PfMul(sc, &sc->temp, &sc->ld[i], &sc->rd[i-1], 0);
@@ -1447,7 +1447,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfMovNeg(sc, &sc->ud[used_registers - i - 1], &sc->ud[used_registers - i - 1]);
 		}
 	}
-	PfIf_end(sc);
+	//PfIf_end(sc);
 	if (!sc->ld_zero) {
 		PfSwapContainers(sc, &sc->rd[0], &sc->rd[used_registers - 1]);
 		PfSwapContainers(sc, &sc->ld[0], &sc->ld[used_registers - 1]);
@@ -1487,8 +1487,8 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		if (!sc->ud_zero) {
 			PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[0], 1);
 		}
-		temp_int.data.i = activeThreads;
-		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+		//temp_int.data.i = activeThreads;
+		//PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
 		if (!sc->ld_zero) {
 			temp_int.data.i = 0;
@@ -1514,7 +1514,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		if (!sc->ud_zero) {
 			PfIf_end(sc);
 		}
-		PfIf_end(sc);
+		//PfIf_end(sc);
 	}
 	/*temp_int.data.i = sc->warpSize * used_registers;
 	PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
