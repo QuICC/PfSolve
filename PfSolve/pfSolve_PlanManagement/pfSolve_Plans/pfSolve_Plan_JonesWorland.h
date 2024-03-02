@@ -97,7 +97,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	if((app->configuration.jw_type % 10) == 3) axis->specializationConstants.performTriSolve = 2;
 
 	axis->specializationConstants.useParallelThomas = 1;
-	if ((app->configuration.jw_type > 1000) || (app->configuration.M_size <= app->configuration.warpSize)) axis->specializationConstants.useParallelThomas = 0;
+	if ((app->configuration.jw_type > 1000) || ((app->configuration.M_size <= app->configuration.warpSize) && (app->configuration.numConsecutiveJWIterations == 1))) axis->specializationConstants.useParallelThomas = 0;
 
 	axis->specializationConstants.useMultipleInputBuffers = app->configuration.useMultipleInputBuffers;
 	axis->specializationConstants.numConsecutiveJWIterations = app->configuration.numConsecutiveJWIterations;

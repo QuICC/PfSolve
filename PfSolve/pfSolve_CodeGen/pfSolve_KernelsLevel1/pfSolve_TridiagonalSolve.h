@@ -60,7 +60,7 @@ static inline void appendTridiagonalSolve_PCR(PfSolveSpecializationConstantsLayo
 	//int64_t maxPCRiteration = (int64_t)ceil(log2(sc->M_size_pow2.data.i));
 	//int64_t BSsystemSize = 0;// sc->M_size_pow2.data.i / sc->warpSize;
 	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
-	int64_t maxPCRiteration = (int64_t)ceil(log2(sc->warpSize)); //(int64_t)ceil(log2(sc->M_size_pow2.data.i));
+	int64_t maxPCRiteration = (sc->warpSize > sc->M_size_pow2.data.i) ? (int64_t)ceil(log2(sc->M_size_pow2.data.i)) :  (int64_t)ceil(log2(sc->warpSize));
 	int64_t maxBSiteration = sc->M_size_pow2.data.i / sc->num_threads;
 	int64_t stride = 1;
 	int64_t next_stride = 1;
@@ -1427,7 +1427,10 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		
 	}
 	
+	uint64_t activeThreads = (sc->M_size.data.i + used_registers - 1) / used_registers;
 
+	temp_int.data.i = activeThreads;
+	PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 	for (uint64_t i = 1; i < used_registers; i++) {
 		if (!sc->ld_zero) {
 			PfMul(sc, &sc->temp, &sc->ld[i], &sc->rd[i-1], 0);
@@ -1444,6 +1447,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfMovNeg(sc, &sc->ud[used_registers - i - 1], &sc->ud[used_registers - i - 1]);
 		}
 	}
+	PfIf_end(sc);
 	if (!sc->ld_zero) {
 		PfSwapContainers(sc, &sc->rd[0], &sc->rd[used_registers - 1]);
 		PfSwapContainers(sc, &sc->ld[0], &sc->ld[used_registers - 1]);
@@ -1454,12 +1458,12 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	int64_t temp_M_size_pow2 = sc->M_size_pow2.data.i;
 	int64_t temp_scaleC_type = sc->scaleC.type;
 	int64_t temp_num_threads = sc->num_threads;
-	pfLD temp_scaleC_d = sc->scaleC.data.d;
-	if (sc->scaleC.type < 100) sc->scaleC.data.d = pfFPinit("1.0");
+	PfContainer temp_scaleC = sc->scaleC;
+	sc->scaleC.data.d = pfFPinit("1.0");
 	sc->scaleC.type = 32;
 	sc->registers_per_thread = 1;
-	sc->M_size.data.i = sc->warpSize;
-	sc->M_size_pow2.data.i = sc->warpSize;
+	sc->M_size.data.i = (sc->warpSize > sc->M_size.data.i) ? sc->M_size.data.i : sc->warpSize;
+	sc->M_size_pow2.data.i = (sc->warpSize > sc->M_size_pow2.data.i) ? sc->M_size_pow2.data.i : sc->warpSize;
 	sc->num_threads = sc->warpSize;
 
 	appendTridiagonalSolve_PCR(sc);
@@ -1468,44 +1472,48 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	sc->M_size.data.i = temp_M_size;
 	sc->M_size_pow2.data.i = temp_M_size_pow2;
 	sc->num_threads = temp_num_threads;
-	if (temp_scaleC_type < 100) sc->scaleC.data.d = temp_scaleC_d;
-	sc->scaleC.type = temp_scaleC_type;
+	sc->scaleC = temp_scaleC;
+
 
 	if (!sc->ld_zero) {
 		PfSwapContainers(sc, &sc->rd[0], &sc->rd[used_registers - 1]);
 		PfSwapContainers(sc, &sc->ld[0], &sc->ld[used_registers - 1]);
 	}
-
-	if (!sc->ld_zero) {
-		PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[used_registers - 1], 1);
-	}
-
-	if (!sc->ud_zero) {
-		PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[0], 1);
-	}
-
-	if (!sc->ld_zero) {
-		temp_int.data.i = 0;
-		PfIf_gt_start(sc, &sc->warpInvocationID, &temp_int);
-	}
-	if (!sc->ud_zero) {
-		temp_int.data.i = sc->warpSize - 1;
-		PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
-	}
-	for (uint64_t i = 1; i < used_registers; i++) {
+	if (used_registers > 1){
 		if (!sc->ld_zero) {
-			PfMul(sc, &sc->temp2, &sc->ld[i-1], &sc->temp, 0);
-			PfSub(sc, &sc->rd[i-1], &sc->rd[i-1], &sc->temp2);
+			PfSubgroupShuffleUp(sc, &sc->temp, &sc->rd[used_registers - 1], 1);
+		}
+
+		if (!sc->ud_zero) {
+			PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[0], 1);
+		}
+		temp_int.data.i = activeThreads;
+		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+
+		if (!sc->ld_zero) {
+			temp_int.data.i = 0;
+			PfIf_gt_start(sc, &sc->warpInvocationID, &temp_int);
 		}
 		if (!sc->ud_zero) {
-			PfMul(sc, &sc->temp2, &sc->ud[used_registers - i], &sc->temp, 0);
-			PfSub(sc, &sc->rd[used_registers - i], &sc->rd[used_registers - i], &sc->temp2);
+			temp_int.data.i = sc->warpSize - 1;
+			PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 		}
-	}
-	if (!sc->ld_zero) {
-		PfIf_end(sc);
-	}
-	if (!sc->ud_zero) {
+		for (uint64_t i = 1; i < used_registers; i++) {
+			if (!sc->ld_zero) {
+				PfMul(sc, &sc->temp2, &sc->ld[i-1], &sc->temp, 0);
+				PfSub(sc, &sc->rd[i-1], &sc->rd[i-1], &sc->temp2);
+			}
+			if (!sc->ud_zero) {
+				PfMul(sc, &sc->temp2, &sc->ud[used_registers - i], &sc->temp, 0);
+				PfSub(sc, &sc->rd[used_registers - i], &sc->rd[used_registers - i], &sc->temp2);
+			}
+		}
+		if (!sc->ld_zero) {
+			PfIf_end(sc);
+		}
+		if (!sc->ud_zero) {
+			PfIf_end(sc);
+		}
 		PfIf_end(sc);
 	}
 	/*temp_int.data.i = sc->warpSize * used_registers;

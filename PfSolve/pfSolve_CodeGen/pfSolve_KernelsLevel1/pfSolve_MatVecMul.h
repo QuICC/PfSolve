@@ -62,6 +62,14 @@ static inline void appendMatVecMul_ParallelThomas(PfSolveSpecializationConstants
 		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 
 		*/
+		uint64_t activeThreads = (sc->M_size.data.i + used_registers - 1) / used_registers;
+
+		temp_int.data.i = activeThreads;
+		PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+
+		if (sc->ud_zero && sc->ld_zero) {
+			PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->md[i], 0);
+		}
 		if (!sc->ud_zero) {
 			if ((sc->inputBufferId == 0) || (sc->numConsecutiveJWIterations == 1))
 				PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->md[i], 0);
@@ -114,6 +122,7 @@ static inline void appendMatVecMul_ParallelThomas(PfSolveSpecializationConstants
 				PfMov(sc, &sc->rd[i], &sc->md[i]);
 			}
 		}
+		PfIf_end(sc);
 		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 
 		*/
