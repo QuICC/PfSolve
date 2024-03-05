@@ -94,7 +94,8 @@ static inline PfSolveResult PfSolve_Plan_block(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.size[2].data.i = 1;
 	//axis->specializationConstants.complexDataType = app->configuration.complexDataType;//((axis->specializationConstants.copy_real!=0)&&(axis->specializationConstants.copy_real!=100)) ? 1 : 0;
 	axis->specializationConstants.jw_control_bitmask = app->configuration.jw_control_bitmask;
-
+	axis->specializationConstants.num_warps_data_parallel = 1;
+	
 	res = initMemoryParametersAPI(app, &axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {
 		deletePfSolve(app);

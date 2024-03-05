@@ -39,6 +39,7 @@ static inline PfSolveResult PfSolve_Plan_FiniteDifferences(PfSolveApplication* a
 	axis->specializationConstants.axis_id = 0;
 	axis->specializationConstants.axis_upload_id = 0;
 	axis->specializationConstants.LUT = 0;// app->configuration.useLUT;
+	axis->specializationConstants.num_warps_data_parallel = 1;
 	//axis->specializationConstants.pushConstants = &axis->pushConstants;
 	
 	//axis->specializationConstants.M_size.type = 31;

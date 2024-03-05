@@ -100,7 +100,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	if ((app->configuration.jw_type > 1000) || ((app->configuration.M_size <= app->configuration.warpSize) && (app->configuration.numConsecutiveJWIterations == 1))) axis->specializationConstants.useParallelThomas = 0;
 	
 	axis->specializationConstants.sharedMatricesUpload = 0;
-	axis->specializationConstants.num_warps_data_parallel = (axis->specializationConstants.useParallelThomas && (axis->specializationConstants.size[1].data.i > 100)) ? 8 : 1;
+	axis->specializationConstants.num_warps_data_parallel = 1;//(axis->specializationConstants.useParallelThomas && (axis->specializationConstants.size[1].data.i > 100)) ? 8 : 1;
 	
 	axis->specializationConstants.useMultipleInputBuffers = app->configuration.useMultipleInputBuffers;
 	axis->specializationConstants.numConsecutiveJWIterations = app->configuration.numConsecutiveJWIterations;

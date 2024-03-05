@@ -91,7 +91,7 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.size[2].data.i = 1;
 	
 	axis->specializationConstants.jw_control_bitmask = app->configuration.jw_control_bitmask;
-
+	axis->specializationConstants.num_warps_data_parallel = 1;
 	
 	axis->specializationConstants.LDA = app->configuration.LDA;
 	axis->specializationConstants.KU = app->configuration.KU;
