@@ -111,7 +111,7 @@ static inline PfSolveResult PfSolveAppend(PfSolveApplication* app, int inverse, 
 		dispatchBlock[2] = (uint64_t)ceil(app->configuration.size[2] / (double)app->localFFTPlan->axes[0]->specializationConstants.logicBlock[2].data.i);
 	}
 	if (app->configuration.jw_type) {
-		dispatchBlock[0] = app->configuration.size[1]* app->configuration.size[2];
+		dispatchBlock[0] = (uint64_t)ceil(app->configuration.size[1] / (double)app->localFFTPlan->axes[0]->specializationConstants.num_warps_data_parallel)* app->configuration.size[2];
 		dispatchBlock[1] = 1;// (uint64_t)ceil(app->configuration.size[1] / (double)app->localFFTPlan->axes[0]->specializationConstants.localSize[1].data.i);
 		dispatchBlock[2] = 1;// (uint64_t)ceil(app->configuration.size[2] / (double)app->localFFTPlan->axes[0]->specializationConstants.localSize[2].data.i);
 	}

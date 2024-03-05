@@ -122,8 +122,14 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				PfMov(sc, &sc->offset_ud_global, &sc->offsetM);
 			}
 			else {
-				sc->offset_md_global.data.i = 0;// sc->offsetM.data.i;
-				sc->offset_ud_global.data.i = sc->M_size.data.i;//  sc->offsetM.data.i + sc->M_size.data.i;
+				if (i == 0) {
+					sc->offset_md_global.data.i = 0;// sc->offsetM.data.i;
+					sc->offset_ud_global.data.i = sc->M_size.data.i;//  sc->offsetM.data.i + sc->M_size.data.i;
+				}
+				else {
+					sc->offset_ud_global.data.i = 0;//  sc->offsetM.data.i + sc->M_size.data.i;
+					sc->md_zero = 1;
+				}
 			}
 		}
 		else {
@@ -146,8 +152,14 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				PfMov(sc, &sc->offset_md_global, &sc->offsetM);
 			}
 			else {
-				sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
-				sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+				if (i == (sc->numConsecutiveJWIterations-1)){
+					sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+					sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+				}else{
+					sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+					sc->md_zero = 1;
+				}
+
 			}
 
 		}
@@ -156,11 +168,20 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		{
 			sc->upperBanded = !sc->upperBanded;
 		}
-		//appendGlobalToShared_all(sc);
-
+		
+		if((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)){
+			appendGlobalToShared_mat_ParallelThomas(sc);
+			appendBarrierPfSolve(sc); //this shouldn't be needed, but it is?
+		}
+		
 		if (sc->performMatVecMul) {
-			if(sc->useParallelThomas)
-				appendGlobalToRegisters_mat_ParallelThomas(sc);
+			if (sc->useParallelThomas) {
+				if ((sc->num_warps_data_parallel > 1)&& (sc->sharedMatricesUpload)) {
+					appendSharedToRegisters_mat_ParallelThomas(sc);
+				}
+				else
+					appendGlobalToRegisters_mat_ParallelThomas(sc);
+			}
 			else
 				appendGlobalToRegisters_mat(sc);
 			//sc->read_SharedToRegisters = 0;
@@ -215,7 +236,10 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			}
 			else {
 				//sc->offset_ld_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
-				sc->offset_ld_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+				if (i == 0)
+					sc->offset_ld_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+				else
+					sc->offset_ld_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
 			}
 		}
 		else {
@@ -241,23 +265,30 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			}
 			else {
 				//sc->offset_md_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
-				sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+				if (i == (sc->numConsecutiveJWIterations-1))
+					sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+				else
+					sc->offset_ud_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
 			}
 		}
 		sc->md_zero = 1;
-		if (sc->performTriSolve) {
+		if (sc->performTriSolve!= 2) {
 			if (sc->performTriSolve != 2)
 			{
-				appendGlobalToRegisters_mat_ParallelThomas(sc);
+				if ((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)) {
+					appendSharedToRegisters_mat_ParallelThomas(sc);
+				}
+				else
+					appendGlobalToRegisters_mat_ParallelThomas(sc);
 			}
-
-			//sc->read_SharedToRegisters = 0;
+		}
+		if ((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)) 
+			appendBarrierPfSolve(sc);
+		if (sc->performTriSolve) {
 			if(sc->useParallelThomas)
 				appendTridiagonalSolve_ParallelThomas(sc);
 			else
 				appendTridiagonalSolve_PCR(sc);
-
-			//sc->read_SharedToRegisters = 0;
 		}
 
 		if (sc->upperBanded) {

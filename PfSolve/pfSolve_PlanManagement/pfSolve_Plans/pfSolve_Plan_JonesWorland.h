@@ -98,7 +98,10 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 
 	axis->specializationConstants.useParallelThomas = 1;
 	if ((app->configuration.jw_type > 1000) || ((app->configuration.M_size <= app->configuration.warpSize) && (app->configuration.numConsecutiveJWIterations == 1))) axis->specializationConstants.useParallelThomas = 0;
-
+	
+	axis->specializationConstants.sharedMatricesUpload = 0;
+	axis->specializationConstants.num_warps_data_parallel = 1;//(axis->specializationConstants.useParallelThomas && (axis->specializationConstants.size[1].data.i > 100)) ? 8 : 1;
+	
 	axis->specializationConstants.useMultipleInputBuffers = app->configuration.useMultipleInputBuffers;
 	axis->specializationConstants.numConsecutiveJWIterations = app->configuration.numConsecutiveJWIterations;
 	//axis->specializationConstants.GivensSteps = 1;
@@ -143,15 +146,17 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 			axis->specializationConstants.registers_per_thread *= 2;
 		}
 	}
-	axis->axisBlock[0] = numWarps * axis->specializationConstants.warpSize;// ((uint64_t)ceil(axis->axisBlock[0] / (double)axis->specializationConstants.warpSize))* axis->specializationConstants.warpSize;
+	axis->axisBlock[0] = axis->specializationConstants.num_warps_data_parallel * numWarps * axis->specializationConstants.warpSize;// ((uint64_t)ceil(axis->axisBlock[0] / (double)axis->specializationConstants.warpSize))* axis->specializationConstants.warpSize;
 	axis->axisBlock[1] = 1;
 	axis->axisBlock[2] = 1;
-	axis->specializationConstants.num_threads = axis->axisBlock[0] * axis->axisBlock[1] * axis->axisBlock[2];
+	axis->specializationConstants.num_threads = (axis->axisBlock[0] / axis->specializationConstants.num_warps_data_parallel) * axis->axisBlock[1] * axis->axisBlock[2];
 
 	axis->specializationConstants.usedSharedMemory.type = 31;
 	if ((axis->specializationConstants.useParallelThomas) && (numWarps == 1)){
 		int64_t shared_stride = 2*(axis->specializationConstants.registers_per_thread / 2) + 1;
-		axis->specializationConstants.usedSharedMemory.data.i = (shared_stride * axis->specializationConstants.warpSize) * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
+		int64_t temp_scale = 1;
+		if (axis->specializationConstants.num_warps_data_parallel > 1) temp_scale = ((axis->specializationConstants.num_warps_data_parallel > 3) || (!axis->specializationConstants.sharedMatricesUpload)) ? axis->specializationConstants.num_warps_data_parallel : 3;
+		axis->specializationConstants.usedSharedMemory.data.i = temp_scale*(shared_stride * axis->specializationConstants.warpSize) * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	}
 	else if (axis->specializationConstants.useParallelThomas) {
 		axis->specializationConstants.usedSharedMemory.data.i = ((axis->specializationConstants.num_threads / axis->specializationConstants.warpSize * axis->specializationConstants.registers_per_thread + 1) * axis->specializationConstants.warpSize) * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
@@ -343,7 +348,8 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		return PFSOLVE_ERROR_FAILED_TO_CREATE_PIPELINE_LAYOUT;
 	}
 #endif*/
-	uint64_t tempSize[3] = { (uint64_t)ceil((app->configuration.size[1] * app->configuration.size[2]) / (double)(axis->axisBlock[1])), 1, 1 };
+	
+	uint64_t tempSize[3] = { (uint64_t)ceil((((uint64_t)ceil(axis->specializationConstants.size[1].data.i / (double)axis->specializationConstants.num_warps_data_parallel)) * app->configuration.size[2]) / (double)(axis->axisBlock[1])), 1, 1 };
 
 
 	if (tempSize[0] > app->configuration.maxComputeWorkGroupCount[0]) axis->specializationConstants.performWorkGroupShift[0] = 1;

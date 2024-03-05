@@ -222,11 +222,44 @@ static inline void appendGlobalToRegistersMultipleBuffers(PfSolveSpecializationC
 	PfAppendLine(sc);
 	PfAppendConversionStart(sc, out, bufferName);
 	int dataSize = ((out->type % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
-	sc->tempLen = sprintf(sc->tempStr, "%s%d[%s]", bufferName->name, sc->inputBufferId, inoutID->name);
+	sc->tempLen = sprintf(sc->tempStr, "%s%d[%s]", bufferName->name, (int)sc->inputBufferId, inoutID->name);
 	PfAppendLine(sc);
 	PfAppendConversionEnd(sc, out, bufferName);
 	sc->tempLen = sprintf(sc->tempStr, ";\n");
 	PfAppendLine(sc);
+	return;
+}
+static inline void appendGlobalToSharedMultipleBuffers(PfSolveSpecializationConstantsLayout* sc, PfContainer* sdataID, PfContainer* bufferName, PfContainer* inoutID)
+{
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	sc->tempLen = sprintf(sc->tempStr, "__pipeline_memcpy_async(&sdata[%s],", sdataID->name);
+	PfAppendLine(sc);
+	int dataSize = ((sc->sdataStruct.type % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
+	sc->tempLen = sprintf(sc->tempStr, "&%s%d[%s], %d)", bufferName->name, (int)sc->inputBufferId, inoutID->name, dataSize);
+	PfAppendLine(sc);
+	sc->tempLen = sprintf(sc->tempStr, ";\n");
+	PfAppendLine(sc);
+
+	/*
+	if (sc->storeSharedComplexComponentsSeparately){
+		sc->tempLen = sprintf(sc->tempStr, "%s", sc->temp.name);
+		PfAppendLine(sc);
+	}else{
+		sc->tempLen = sprintf(sc->tempStr, "sdata[%s]", sdataID->name);
+		PfAppendLine(sc);
+	}
+	sc->tempLen = sprintf(sc->tempStr, " = ");
+	PfAppendLine(sc);
+	PfAppendConversionStart(sc, &sc->sdataStruct, bufferName);
+	int dataSize = ((sc->sdataStruct.type % 10) == 3) ? sc->complexSize : sc->complexSize / 2;
+	sc->tempLen = sprintf(sc->tempStr, "%s%d[%s]", bufferName->name, sc->inputBufferId, inoutID->name);
+	PfAppendLine(sc);
+	PfAppendConversionEnd(sc, &sc->sdataStruct, bufferName);
+	sc->tempLen = sprintf(sc->tempStr, ";\n");
+	PfAppendLine(sc);
+	if (sc->storeSharedComplexComponentsSeparately){
+		appendRegistersToShared(sc, sdataID, &sc->temp);
+	}*/
 	return;
 }
 static inline void appendGlobalToRegisters_x(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* bufferName, PfContainer* inoutID)

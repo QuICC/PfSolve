@@ -84,6 +84,11 @@ static inline void appendExtensions(PfSolveSpecializationConstantsLayout* sc) {
 #include <%s/include/cuda_fp16.h>\n", CUDA_TOOLKIT_ROOT_DIR);
 		PfAppendLine(sc);
 	}
+	if(sc->num_warps_data_parallel>1){
+		sc->tempLen = sprintf(sc->tempStr, "\
+	#include <%s/include/cuda_pipeline.h>\n", CUDA_TOOLKIT_ROOT_DIR);
+		PfAppendLine(sc);
+	}
 #elif(VKFFT_BACKEND==2)
 #ifdef PFSOLVE_OLD_ROCM
 	sc->tempLen = sprintf(sc->tempStr, "\
