@@ -918,12 +918,12 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	PfAppendLine(sc);
 	}
 	int64_t estimateMinBlocksPerSM = 1;
-	if (sc->registers_per_thread<48){//this is kind of an estimate numbers with not much testing
+	/*if (sc->registers_per_thread<48){//this is kind of an estimate numbers with not much testing
 		if (sc->registers_per_thread>24)
 			estimateMinBlocksPerSM = ((16+sc->num_warps_data_parallel-1)/sc->num_warps_data_parallel);//128 registers per thread
 		else
 			estimateMinBlocksPerSM = ((24+sc->num_warps_data_parallel-1)/sc->num_warps_data_parallel);//80 registers per thread
-	}
+	}*/
 	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ", %" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, estimateMinBlocksPerSM, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	if (sc->useMultipleInputBuffers) {
