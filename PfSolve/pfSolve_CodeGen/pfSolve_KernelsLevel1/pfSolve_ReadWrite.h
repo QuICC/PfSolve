@@ -1882,6 +1882,67 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 	return;
 }
 
+static inline void appendReadWrite_rd_uncoalesced(PfSolveSpecializationConstantsLayout* sc, int readWrite) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	PfContainer temp_int = {};
+	temp_int.type = 31;
+	PfContainer temp_int1 = {};
+	temp_int1.type = 31;
+	PfContainer temp_double = {};
+	temp_double.type = 32;
+
+	temp_int.data.i = sc->registers_per_thread;
+	PfMul(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int, 0);
+
+	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
+		if (i > 0) {
+			temp_int.data.i = sc->num_threads / sc->warpSize;
+			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
+		}
+		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
+
+		int control_zp = 0;
+		PfConfigureZeropad(sc, &sc->inoutID, &control_zp, readWrite);
+		temp_int.data.i = 0;
+		if (control_zp) PfIf_gt_start(sc, &sc->tempInt, &temp_int);
+
+		//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " = %s%s[inoutID + %s*%" PRIu64 "+%" PRIu64 "]%s;\n", i, sc->convTypeLeftInput, sc->inputsStructRes, sc->gl_WorkGroupID_x, sc->outputStride[2].x_num, sc->offset_res_global, sc->convTypeRightInput);
+		PfMul(sc, &sc->tempInt, &sc->gl_WorkGroupID_x, &sc->outputStride[1], 0);
+		PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->tempInt);
+		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->offset_res_global);
+		if (sc->readToRegisters || sc->writeFromRegisters) {
+			if (readWrite)
+				appendRegistersToGlobal(sc, &sc->outputsStruct, &sc->tempInt, &sc->rd[i]);
+			else {
+				appendGlobalToRegisters(sc, &sc->rd[i], &sc->outputsStruct, &sc->tempInt);
+				if (control_zp) {
+					PfIf_else(sc);
+					PfSetToZero(sc, &sc->rd[i]);
+				}
+			}
+		}
+		else {
+			temp_int.data.i = i * sc->num_threads + sc->offset_res.data.i;
+			if (sc->num_warps_data_parallel > 1) 
+				PfAdd(sc, &sc->inoutID_x, &sc->warpInvocationID, &temp_int);
+			else
+				PfAdd(sc, &sc->inoutID_x, &sc->gl_LocalInvocationID_x, &temp_int);
+			if (readWrite)
+				appendSharedToGlobal(sc, &sc->outputsStruct, &sc->tempInt, &sc->inoutID_x);
+			else {
+				appendGlobalToShared(sc, &sc->inoutID_x, &sc->outputsStruct, &sc->tempInt);
+				if (control_zp) {
+					PfIf_else(sc);
+					PfSetToZeroShared(sc, &sc->inoutID_x);
+				}
+			}
+		}
+		if (control_zp) PfIf_end(sc);
+		PfIf_end(sc);
+	}
+	return;
+}
+
 static inline void appendReadWrite_block(PfSolveSpecializationConstantsLayout* sc, int readWrite) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	PfContainer temp_int = {};

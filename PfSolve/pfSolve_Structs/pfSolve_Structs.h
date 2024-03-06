@@ -923,6 +923,7 @@ typedef struct {
 	int ud_zero;
 	int ld_zero;
 	int num_warps_data_parallel;
+	int useUncoalescedJWTnoSharedMemory;
 	int sharedMatricesUpload;
 	int num_threads;
 	int numConsecutiveJWIterations;

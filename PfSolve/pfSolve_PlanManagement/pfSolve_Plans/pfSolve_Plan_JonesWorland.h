@@ -102,6 +102,8 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.sharedMatricesUpload = 0;
 	axis->specializationConstants.num_warps_data_parallel = 1;//(axis->specializationConstants.useParallelThomas && (axis->specializationConstants.size[1].data.i > 100)) ? 8 : 1;
 	
+	axis->specializationConstants.useUncoalescedJWTnoSharedMemory = 0;//(axis->specializationConstants.sharedMatricesUpload || axis->specializationConstants.num_warps_data_parallel || (axis->specializationConstants.useParallelThomas!)) 0 : 0;
+	
 	axis->specializationConstants.useMultipleInputBuffers = app->configuration.useMultipleInputBuffers;
 	axis->specializationConstants.numConsecutiveJWIterations = app->configuration.numConsecutiveJWIterations;
 	//axis->specializationConstants.GivensSteps = 1;
@@ -156,6 +158,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		int64_t shared_stride = 2*(axis->specializationConstants.registers_per_thread / 2) + 1;
 		int64_t temp_scale = 1;
 		if (axis->specializationConstants.num_warps_data_parallel > 1) temp_scale = ((axis->specializationConstants.num_warps_data_parallel > 3) || (!axis->specializationConstants.sharedMatricesUpload)) ? axis->specializationConstants.num_warps_data_parallel : 3;
+		if (axis->specializationConstants.useUncoalescedJWTnoSharedMemory) temp_scale = 0;
 		axis->specializationConstants.usedSharedMemory.data.i = temp_scale*(shared_stride * axis->specializationConstants.warpSize) * (axis->specializationConstants.complexSize/2);// 4 * axis->specializationConstants.M_size * axis->specializationConstants.dataTypeSize;
 	}
 	else if (axis->specializationConstants.useParallelThomas) {

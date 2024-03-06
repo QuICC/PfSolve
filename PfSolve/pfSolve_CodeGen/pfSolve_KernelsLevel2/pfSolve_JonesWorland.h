@@ -87,9 +87,13 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	}
 
 	sc->readToRegisters = 1;
-	appendReadWrite_rd(sc, 0);
-	if(sc->useParallelThomas)
-		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
+	if(sc->useUncoalescedJWTnoSharedMemory)
+		appendReadWrite_rd_uncoalesced(sc, 0);
+	else{
+		appendReadWrite_rd(sc, 0);
+		if(sc->useParallelThomas)
+			appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
+	}
 
 	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
@@ -305,8 +309,6 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		}
 	}
 
-	if(sc->useParallelThomas)
-		appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc);
 	//int i =0;
 	//if((i==0)){
 	//							sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d %%f  %%f  %%f  %%f\\n\", inoutID, ld_%" PRIu64 ", md_%" PRIu64 ", ud_%" PRIu64 ", res_%" PRIu64 ");\n", i,i,i,i);
@@ -314,8 +316,13 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	//							
 	//						}
 	sc->writeFromRegisters = 1;
-	appendReadWrite_rd(sc, 1);
-
+	if(sc->useUncoalescedJWTnoSharedMemory)
+		appendReadWrite_rd_uncoalesced(sc, 1);
+	else{
+		if(sc->useParallelThomas)
+			appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc);
+		appendReadWrite_rd(sc, 1);
+	}
 	PfDeallocateContainer(sc, &sc->offset_res_global);
 
 	
