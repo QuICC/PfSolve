@@ -25,6 +25,28 @@
 #include "pfSolve_CodeGen/pfSolve_StringManagement/pfSolve_StringManager.h"
 
 static inline void PfPrintReg(PfSolveSpecializationConstantsLayout* sc, PfContainer* inoutID, PfContainer* in);
+
+static inline void appendBarrierPfSolve(PfSolveSpecializationConstantsLayout* sc) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+#if(VKFFT_BACKEND==0)
+	sc->tempLen = sprintf(sc->tempStr, "barrier();\n\n");
+	PfAppendLine(sc);
+#elif(VKFFT_BACKEND==1)
+	sc->tempLen = sprintf(sc->tempStr, "__syncthreads();\n\n");
+	PfAppendLine(sc);
+#elif(VKFFT_BACKEND==2)
+	sc->tempLen = sprintf(sc->tempStr, "__syncthreads();\n\n");
+	PfAppendLine(sc);
+#elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
+	sc->tempLen = sprintf(sc->tempStr, "barrier(CLK_LOCAL_MEM_FENCE);\n\n");
+	PfAppendLine(sc);
+#elif(VKFFT_BACKEND==5)
+	sc->tempLen = sprintf(sc->tempStr, "threadgroup_barrier(mem_flags::mem_none);\n\n");
+	PfAppendLine(sc);
+#endif
+	return;
+}
+
 //register manipulation functions: mov, add, sub, etc.
 static inline void PfCopyContainer(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
@@ -1624,6 +1646,7 @@ static inline void PfIf_else(PfSolveSpecializationConstantsLayout* sc);
 static inline void PfIf_end(PfSolveSpecializationConstantsLayout* sc);
 
 static inline void PfMul(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in_1, PfContainer* in_2, PfContainer* temp);
+static inline void PfMulNeg(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in_1, PfContainer* in_2, PfContainer* temp);
 static inline void PfDiv(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in_1, PfContainer* in_2);
 static inline void PfDivCeil(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in_1, PfContainer* in_2);
 
@@ -2537,6 +2560,318 @@ static inline void PfMul(PfSolveSpecializationConstantsLayout* sc, PfContainer* 
 							return;
 						case 2:
 							out->data.d = in_1->data.d * in_2->data.d;
+							return;
+						}
+					}
+					break;
+				}
+			}
+			break;
+		}
+	}
+	sc->res = PFSOLVE_ERROR_MATH_FAILED;
+	return;
+}
+
+static inline void PfMulNeg(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in_1, PfContainer* in_2, PfContainer* temp) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	if ((out->type % 10) == 3){
+#if(VKFFT_BACKEND == 2)
+		if ((in_1->type > 100) && (in_2->type > 100) && (((out->type % 100) / 10) != 3)) {
+			//packed instructions workaround if all values are in registers
+			if (((in_1->type % 10) != 3) || ((in_2->type % 10) != 3)) {
+				sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+				PfAppendLine(sc);
+				sc->tempLen = sprintf(sc->tempStr, " = ");
+				PfAppendLine(sc);
+				PfAppendConversionStart(sc, out, in_1);
+				sc->tempLen = sprintf(sc->tempStr, "(-%s)", in_1->name);
+				PfAppendLine(sc);
+				PfAppendConversionEnd(sc, out, in_1);
+				sc->tempLen = sprintf(sc->tempStr, " * ");
+				PfAppendLine(sc);
+				PfAppendConversionStart(sc, out, in_2);
+				sc->tempLen = sprintf(sc->tempStr, "%s", in_2->name);
+				PfAppendLine(sc);
+				PfAppendConversionEnd(sc, out, in_2);
+				sc->tempLen = sprintf(sc->tempStr, ";\n");
+				PfAppendLine(sc);
+				return;
+			}
+			else {
+				if ((((out->type % 100) / 10) < 2) && (out->type == in_1->type) && (out->type == in_2->type)) {
+					if ((strcmp(out->name, in_1->name)) && (strcmp(out->name, in_2->name))) {
+						PfMovNeg(sc, &out->data.c[0], &in_1->data.c[1]);
+						PfMov(sc, &out->data.c[1], &in_1->data.c[0]);
+						sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " = ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " * ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", in_2->data.c[1].name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, ";\n");
+						PfAppendLine(sc);
+						
+						sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " = ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "(-%s)", in_1->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " * ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", in_2->data.c[0].name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " - ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, ";\n");
+						PfAppendLine(sc);
+					}
+					else {
+						PfMovNeg(sc, &temp->data.c[0], &in_1->data.c[1]);
+						PfMov(sc, &temp->data.c[1], &in_1->data.c[0]);
+						sc->tempLen = sprintf(sc->tempStr, "%s", temp->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " = ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", temp->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " * ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", in_2->data.c[1].name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, ";\n");
+						PfAppendLine(sc);
+
+						sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " = ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "(-%s)", in_1->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " * ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", in_2->data.c[0].name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, " - ");
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, "%s", temp->name);
+						PfAppendLine(sc);
+						sc->tempLen = sprintf(sc->tempStr, ";\n");
+						PfAppendLine(sc);
+					}
+					return;
+				}
+			}
+		}
+#endif
+		if ((in_2->type % 10) == 3){
+			if ((in_1->type % 10) == 3){
+				if ((in_1->type < 100) || (in_2->type < 100) || ((strcmp(out->name, in_1->name)) && (strcmp(out->name, in_2->name)))) {
+					PfMul(sc, &out->data.c[0], &in_1->data.c[1], &in_2->data.c[1], 0);
+					PfMovNeg(sc, &out->data.c[0], &out->data.c[0]);
+					PfFMA(sc, &out->data.c[0], &in_1->data.c[0], &in_2->data.c[0], &out->data.c[0]);
+
+					PfMul(sc, &out->data.c[1], &in_1->data.c[1], &in_2->data.c[0], 0);
+					PfFMA(sc, &out->data.c[1], &in_1->data.c[0], &in_2->data.c[1], &out->data.c[1]);
+					PfMovNeg(sc, out, out);
+				}else{
+					PfMul(sc, &temp->data.c[0], &in_1->data.c[1], &in_2->data.c[1], 0);
+					PfMovNeg(sc, &temp->data.c[0], &temp->data.c[0]);
+					PfFMA(sc, &temp->data.c[0], &in_1->data.c[0], &in_2->data.c[0], &temp->data.c[0]);
+
+					PfMul(sc, &temp->data.c[1], &in_1->data.c[1], &in_2->data.c[0], 0);
+					PfFMA(sc, &out->data.c[1], &in_1->data.c[0], &in_2->data.c[1], &temp->data.c[1]);
+					PfMov(sc, &out->data.c[0], &temp->data.c[0]);
+					PfMovNeg(sc, out, out);
+				}
+			}else{
+				PfMulNeg(sc, &out->data.c[0], in_1, &in_2->data.c[0], 0);
+				PfMulNeg(sc, &out->data.c[1], in_1, &in_2->data.c[1], 0);
+			}
+		}else{
+			if ((in_1->type % 10) == 3){
+				PfMulNeg(sc, &out->data.c[0], &in_1->data.c[0], in_2, 0);
+				PfMulNeg(sc, &out->data.c[1], &in_1->data.c[1], in_2, 0);
+			}else{
+				PfMulNeg(sc, &out->data.c[0], in_1, in_2, 0);
+				PfMov(sc, &out->data.c[1], &out->data.c[0]);
+			}
+		}
+		return;
+	}
+	else if ((((out->type % 100) / 10) == 3) && ((out->type % 10) == 2)) {
+		PfContainer temp1 = PFSOLVE_ZERO_INIT;
+		PfConvToDoubleDouble(sc, &temp1, in_1);
+		PfContainer temp2 = PFSOLVE_ZERO_INIT;
+		PfConvToDoubleDouble(sc, &temp2, in_2);
+		
+		PfQuadProd(sc, &sc->tempQuad.data.c[0], &temp1.data.dd[0], &temp2.data.dd[0], &sc->tempQuad3);
+		PfFMA(sc, &sc->tempQuad.data.c[0].data.dd[1], &temp1.data.dd[0], &temp2.data.dd[1], &sc->tempQuad.data.c[0].data.dd[1]);
+		PfFMA(sc, &sc->tempQuad.data.c[0].data.dd[1], &temp1.data.dd[1], &temp2.data.dd[0], &sc->tempQuad.data.c[0].data.dd[1]);
+		PfQuadQuickSum(sc, out, &sc->tempQuad.data.c[0].data.dd[0], &sc->tempQuad.data.c[0].data.dd[1]);
+		PfMovNeg(sc, out, out);
+
+		PfDeallocateContainer(sc, &temp1);
+		PfDeallocateContainer(sc, &temp2);
+		return;
+	}
+	if (out->type > 100) {
+		sc->tempLen = sprintf(sc->tempStr, "%s", out->name);
+		PfAppendLine(sc);
+		sc->tempLen = sprintf(sc->tempStr, " = ");
+		PfAppendLine(sc);
+		if ((in_1->type < 100) && (in_2->type < 100)) {
+			switch (in_1->type % 10) {
+			case 1:
+				switch (in_2->type % 10) {
+				case 1:
+					sc->tempLen = sprintf(sc->tempStr, "%" PRIi64 "", -in_1->data.i * in_2->data.i);
+					PfAppendLine(sc);
+					break;
+				case 2:
+					sc->tempLen = sprintf(sc->tempStr, "%.17Le", (long double)((pfLD)-in_1->data.i * in_2->data.d));
+					PfAppendLine(sc);
+					break;
+				}
+				break;
+			case 2:
+				switch (in_2->type % 10) {
+				case 1:
+					sc->tempLen = sprintf(sc->tempStr, "%.17Le", (long double) (-in_1->data.d * (pfLD)in_2->data.i));
+					PfAppendLine(sc);
+					break;
+				case 2:
+					sc->tempLen = sprintf(sc->tempStr, "%.17Le", (long double) (-in_1->data.d * in_2->data.d));
+					PfAppendLine(sc);
+					break;
+				}
+				break;
+			}
+			PfAppendNumberLiteral(sc, out);
+			sc->tempLen = sprintf(sc->tempStr, ";\n");
+			PfAppendLine(sc);
+		}
+		else {
+			PfAppendConversionStart(sc, out, in_1);
+			if (in_1->type > 100) {
+				sc->tempLen = sprintf(sc->tempStr, "(%s)", in_1->name);
+				PfAppendLine(sc);
+			}
+			else {
+				switch (in_1->type % 10) {
+				case 1:
+					sc->tempLen = sprintf(sc->tempStr, "%" PRIi64 "", -in_1->data.i);
+					PfAppendLine(sc);
+					break;
+				case 2:
+					sc->tempLen = sprintf(sc->tempStr, "%.17Le", (long double) -in_1->data.d);
+					PfAppendLine(sc);
+					break;
+				}
+				PfAppendNumberLiteral(sc, out);
+			}
+			PfAppendConversionEnd(sc, out, in_1);
+			sc->tempLen = sprintf(sc->tempStr, " * ");
+			PfAppendLine(sc);
+			PfAppendConversionStart(sc, out, in_2);
+			if (in_2->type > 100) {
+				sc->tempLen = sprintf(sc->tempStr, "(-%s)", in_2->name);
+				PfAppendLine(sc);
+			}
+			else {
+				switch (in_2->type % 10) {
+				case 1:
+					sc->tempLen = sprintf(sc->tempStr, "%" PRIi64 "", in_2->data.i);
+					PfAppendLine(sc);
+					break;
+				case 2:
+					sc->tempLen = sprintf(sc->tempStr, "%.17Le", (long double) in_2->data.d);
+					PfAppendLine(sc);
+					break;
+				}
+				PfAppendNumberLiteral(sc, out);
+			}
+			PfAppendConversionEnd(sc, out, in_2);
+			sc->tempLen = sprintf(sc->tempStr, ";\n");
+			PfAppendLine(sc);
+		}
+
+		return;
+	}
+	else {
+		switch (out->type % 10) {
+		case 1:
+			if (in_1->type > 100) {
+			}
+			else {
+				switch (in_1->type % 10) {
+				case 1:
+					if (in_2->type > 100) {
+					}
+					else {
+						switch (in_2->type % 10) {
+						case 1:
+							out->data.i = -in_1->data.i * in_2->data.i;
+							return;
+						case 2:
+							out->data.i = (pfINT)(-in_1->data.i * in_2->data.d);
+							return;
+						}
+					}
+					break;
+				case 2:
+					if (in_2->type > 100) {
+					}
+					else {
+						switch (in_2->type % 10) {
+						case 1:
+							out->data.i = (pfINT)(-in_1->data.d * in_2->data.i);
+							return;
+						case 2:
+							out->data.i = (pfINT)(-in_1->data.d * in_2->data.d);
+							return;
+						}
+					}
+					break;
+				}
+			}
+			break;
+		case 2:
+			if (in_1->type > 100) {
+			}
+			else {
+				switch (in_1->type % 10) {
+				case 1:
+					if (in_2->type > 100) {
+					}
+					else {
+						switch (in_2->type % 10) {
+						case 1:
+							out->data.d = (pfLD)(-in_1->data.i * in_2->data.i);
+							return;
+						case 2:
+							out->data.d = (pfLD)-in_1->data.i * in_2->data.d;
+							return;
+						}
+					}
+					break;
+				case 2:
+					if (in_2->type > 100) {
+					}
+					else {
+						switch (in_2->type % 10) {
+						case 1:
+							out->data.d = -in_1->data.d * (pfLD)in_2->data.i;
+							return;
+						case 2:
+							out->data.d = -in_1->data.d * in_2->data.d;
 							return;
 						}
 					}
@@ -4176,6 +4511,20 @@ static inline void PfSubgroupAdd(PfSolveSpecializationConstantsLayout* sc, PfCon
 
 static inline void PfSubgroupShuffleDown(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in, int stride) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
+	if (sc->logicalWarpSize > sc->warpSize) {
+		PfContainer temp_int = PFSOLVE_ZERO_INIT;
+		temp_int.type = 31;
+		temp_int.data.i = stride;
+		PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+		temp_int.data.i = stride;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+		
+		sc->tempLen = sprintf(sc->tempStr, "\
+sdata[%s] = %s;\n", sc->tempInt.name, in->name);
+		PfAppendLine(sc);
+		PfIf_end(sc);
+	}
 	if (((out->type/10) % 10) == 3) {
 		PfSubgroupShuffleDown(sc, &out->data.dd[0], &in->data.dd[0], stride);
 		PfSubgroupShuffleDown(sc, &out->data.dd[1], &in->data.dd[1], stride);
@@ -4195,10 +4544,52 @@ static inline void PfSubgroupShuffleDown(PfSolveSpecializationConstantsLayout* s
 
 #endif
 	}
+	if (sc->logicalWarpSize > sc->warpSize) {
+		appendBarrierPfSolve(sc);
+		PfContainer temp_int = PFSOLVE_ZERO_INIT;
+		temp_int.type = 31;
+		temp_int.data.i = sc->warpSize - stride;
+		PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+
+		temp_int.data.i = sc->logicalWarpSize / sc->warpSize - 1;
+		PfIf_lt_start(sc, &sc->warpID, &temp_int);
+		temp_int.data.i = 1;
+		PfAdd(sc, &sc->tempInt, &sc->warpID, &temp_int);
+
+		temp_int.data.i = stride;
+		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+		temp_int.data.i = sc->warpSize - stride;
+		PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+
+		sc->tempLen = sprintf(sc->tempStr, "\
+%s = sdata[%s];\n", out->name, sc->tempInt.name);
+		PfAppendLine(sc);
+
+		PfIf_end(sc);
+		PfIf_end(sc);
+		appendBarrierPfSolve(sc);
+	}
+	
 	return;
 };
 static inline void PfSubgroupShuffleUp(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in, int stride) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
+	if (sc->logicalWarpSize > sc->warpSize) {
+		PfContainer temp_int = PFSOLVE_ZERO_INIT;
+		temp_int.type = 31;
+		temp_int.data.i = sc->warpSize - stride;
+		PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+		temp_int.data.i = stride;
+		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
+		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+		temp_int.data.i = sc->warpSize - stride;
+		PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+		sc->tempLen = sprintf(sc->tempStr, "\
+sdata[%s] = %s;\n", sc->tempInt.name, in->name);
+		PfAppendLine(sc);
+		PfIf_end(sc);
+	}
 	if (((out->type/10) % 10) == 3) {
 		PfSubgroupShuffleUp(sc, &out->data.dd[0], &in->data.dd[0], stride);
 		PfSubgroupShuffleUp(sc, &out->data.dd[1], &in->data.dd[1], stride);
@@ -4218,8 +4609,33 @@ static inline void PfSubgroupShuffleUp(PfSolveSpecializationConstantsLayout* sc,
 
 #endif
 	}
+	if (sc->logicalWarpSize > sc->warpSize) {
+		appendBarrierPfSolve(sc);
+		PfContainer temp_int = PFSOLVE_ZERO_INIT;
+		temp_int.type = 31;
+		temp_int.data.i = stride;
+		PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+
+		temp_int.data.i = 0;
+		PfIf_gt_start(sc, &sc->warpID, &temp_int);
+		temp_int.data.i = 1;
+		PfSub(sc, &sc->tempInt, &sc->warpID, &temp_int);
+
+		temp_int.data.i = stride;
+		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
+		
+		sc->tempLen = sprintf(sc->tempStr, "\
+%s = sdata[%s];\n", out->name, sc->tempInt.name);
+		PfAppendLine(sc);
+
+		PfIf_end(sc);
+		PfIf_end(sc);
+		appendBarrierPfSolve(sc);
+	}
 	return;
 };
+
 static inline void PfSubgroupShuffleUpCyclic(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in, int stride) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	if (((out->type/10) % 10) == 3) {

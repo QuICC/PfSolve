@@ -177,7 +177,7 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 		PfSetToZero(sc, &sc->rd[i]);
 	}
 	int64_t num_copy_registers = sc->registers_per_thread;
-	if (sc->useParallelThomas && (sc->warpSize == sc->num_threads)) num_copy_registers = 1;
+	if (sc->useParallelThomas) num_copy_registers = 1;
 
 	for (int i = 0; i < num_copy_registers; i++) {
 		sc->rd_copy[i].type = 100 + sc->floatTypeCode;
@@ -186,34 +186,75 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 		PfDefine(sc, &sc->rd_copy[i], name);
 		PfSetToZero(sc, &sc->rd_copy[i]);
 	}
-	//we focus on bidiagonal systems for now 
-	for (int i = 0; i < sc->registers_per_thread; i++) {
-		sc->ud[i].type = 100 + sc->floatTypeCode;
-		PfAllocateContainerFlexible(sc, &sc->ud[i], 50);
-		sprintf(name, "uld_%d", i);
-		PfDefine(sc, &sc->ud[i], name);
-		PfSetToZero(sc, &sc->ud[i]);
-	}
+	if (sc->upperBanded == 2) {
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			sc->ud[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->ud[i], 50);
+			sprintf(name, "ud_%d", i);
+			PfDefine(sc, &sc->ud[i], name);
+			PfSetToZero(sc, &sc->ud[i]);
+		}
 
-	for (int i = 0; i < sc->registers_per_thread; i++) {
-		sc->ld[i].type = 100 + sc->floatTypeCode;
-		PfAllocateContainerFlexible(sc, &sc->ld[i], 50);
-		sprintf(name, "uld_%d", i);
-		PfSetContainerName(sc, &sc->ld[i], name);
-		//PfDefine(sc, &sc->ld[i], name);
-		//PfSetToZero(sc, &sc->ld[i]);
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			sc->ld[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->ld[i], 50);
+			sprintf(name, "ld_%d", i);
+			PfSetContainerName(sc, &sc->ld[i], name);
+			PfDefine(sc, &sc->ld[i], name);
+			PfSetToZero(sc, &sc->ld[i]);
+		}
+		
+		for (int i = 0; i < 1; i++) {
+			sc->ud_copy[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->ud_copy[i], 50);
+			sprintf(name, "ud_copy_%d", i);
+			PfSetContainerName(sc, &sc->ud_copy[i], name);
+			PfDefine(sc, &sc->ud_copy[i], name);
+			PfSetToZero(sc, &sc->ud_copy[i]);
+		}
+		for (int i = 0; i < 1; i++) {
+			sc->ld_copy[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->ld_copy[i], 50);
+			sprintf(name, "ld_copy_%d", i);
+			PfSetContainerName(sc, &sc->ld_copy[i], name);
+			PfDefine(sc, &sc->ld_copy[i], name);
+			PfSetToZero(sc, &sc->ld_copy[i]);
+		}
+
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			sc->md[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->md[i], 50);
+			sprintf(name, "md_%d", i);
+			PfDefine(sc, &sc->md[i], name);
+			PfSetToZero(sc, &sc->md[i]);
+		}
 	}
-	if (!sc->upperBanded) {
+	else {
+		//we focus on bidiagonal systems here
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			sc->ud[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->ud[i], 50);
+			sprintf(name, "uld_%d", i);
+			PfDefine(sc, &sc->ud[i], name);
+			PfSetToZero(sc, &sc->ud[i]);
+		}
+
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			sc->ld[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->ld[i], 50);
+			sprintf(name, "uld_%d", i);
+			PfSetContainerName(sc, &sc->ld[i], name);
+			//PfDefine(sc, &sc->ld[i], name);
+			//PfSetToZero(sc, &sc->ld[i]);
+		}
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			sc->ud_copy[i].type = 100 + sc->floatTypeCode;
 			PfAllocateContainerFlexible(sc, &sc->ud_copy[i], 50);
 			sprintf(name, "copy_%d", i);
 			PfSetContainerName(sc, &sc->ud_copy[i], name);
-			//PfDefine(sc, &sc->ud_copy[i], name);
-			//PfSetToZero(sc, &sc->ud_copy[i]);
+			PfDefine(sc, &sc->ud_copy[i], name);
+			PfSetToZero(sc, &sc->ud_copy[i]);
 		}
-	}
-	else {
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			sc->ld_copy[i].type = 100 + sc->floatTypeCode;
 			PfAllocateContainerFlexible(sc, &sc->ld_copy[i], 50);
@@ -222,14 +263,17 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 			//PfDefine(sc, &sc->ld_copy[i], name);
 			//PfSetToZero(sc, &sc->ld_copy[i]);
 		}
+
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			sc->md[i].type = 100 + sc->floatTypeCode;
+			PfAllocateContainerFlexible(sc, &sc->md[i], 50);
+			sprintf(name, "copy_%d", i);
+			PfSetContainerName(sc, &sc->md[i], name);
+			//PfDefine(sc, &sc->md[i], name);
+			//PfSetToZero(sc, &sc->md[i]);
+		}
 	}
-	for (int i = 0; i < sc->registers_per_thread; i++) {
-		sc->md[i].type = 100 + sc->floatTypeCode;
-		PfAllocateContainerFlexible(sc, &sc->md[i], 50);
-		sprintf(name, "copy_%d", i);
-		PfDefine(sc, &sc->md[i], name);
-		PfSetToZero(sc, &sc->md[i]);
-	}
+
 	sc->temp.type = 100 + sc->floatTypeCode;
 	PfAllocateContainerFlexible(sc, &sc->temp, 50);
 	sprintf(name, "temp_0");
@@ -593,12 +637,18 @@ static inline void freeRegistersInitialization_compute_JW(PfSolveSpecializationC
 	for (int i = 0; i < sc->registers_per_thread; i++) {
 		PfDeallocateContainer(sc, &sc->ld[i]);
 	}
-	if (!sc->upperBanded) {
-		for (int i = 0; i < sc->registers_per_thread; i++) {
+	if (sc->upperBanded == 2) {
+		for (int i = 0; i < 1; i++) {
 			PfDeallocateContainer(sc, &sc->ud_copy[i]);
+		}
+		for (int i = 0; i < 1; i++) {
+			PfDeallocateContainer(sc, &sc->ld_copy[i]);
 		}
 	}
 	else {
+		for (int i = 0; i < sc->registers_per_thread; i++) {
+			PfDeallocateContainer(sc, &sc->ud_copy[i]);
+		}
 		for (int i = 0; i < sc->registers_per_thread; i++) {
 			PfDeallocateContainer(sc, &sc->ld_copy[i]);
 		}

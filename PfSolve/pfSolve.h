@@ -99,6 +99,6 @@
 #include "pfSolve_AppManagement/pfSolve_DeleteApp.h"
 
 static inline int PfSolveGetVersion() {
-	return 00100; //X.XX.XX format
+	return 00101; //X.XX.XX format
 }
 #endif

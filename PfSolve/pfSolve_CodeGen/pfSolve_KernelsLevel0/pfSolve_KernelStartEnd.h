@@ -919,6 +919,7 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	}
 	int64_t estimateMinBlocksPerSM = 0;
 	if(sc->numConsecutiveJWIterations>=6) estimateMinBlocksPerSM = 1; // force big register file to reduce number of blocks per SM and increase L1 size
+	if(sc->localSize[0].data.i>=192) estimateMinBlocksPerSM = 2;
 	/*if (sc->registers_per_thread<48){//this is kind of an estimate numbers with not much testing
 		if (sc->registers_per_thread>24)
 			estimateMinBlocksPerSM = ((16+sc->num_warps_data_parallel-1)/sc->num_warps_data_parallel);//128 registers per thread

@@ -23,7 +23,7 @@
 #define PFSOLVE_KERNELUTILS_H
 #include "pfSolve_Structs/pfSolve_Structs.h"
 #include "pfSolve_CodeGen/pfSolve_StringManagement/pfSolve_StringManager.h"
-#include "pfSolve_CodeGen/pfSolve_MathUtils/pfSolve_MathUtils.h"
+//#include "pfSolve_CodeGen/pfSolve_MathUtils/pfSolve_MathUtils.h"
 
 static inline void appendLicense(PfSolveSpecializationConstantsLayout* sc) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
@@ -301,27 +301,6 @@ static inline void appendConversion(PfSolveSpecializationConstantsLayout* sc) {
 		PfAppendLine(sc);
 #endif
 	}
-	return;
-}
-
-static inline void appendBarrierPfSolve(PfSolveSpecializationConstantsLayout* sc) {
-	if (sc->res != PFSOLVE_SUCCESS) return;
-#if(VKFFT_BACKEND==0)
-	sc->tempLen = sprintf(sc->tempStr, "barrier();\n\n");
-	PfAppendLine(sc);
-#elif(VKFFT_BACKEND==1)
-	sc->tempLen = sprintf(sc->tempStr, "__syncthreads();\n\n");
-	PfAppendLine(sc);
-#elif(VKFFT_BACKEND==2)
-	sc->tempLen = sprintf(sc->tempStr, "__syncthreads();\n\n");
-	PfAppendLine(sc);
-#elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
-	sc->tempLen = sprintf(sc->tempStr, "barrier(CLK_LOCAL_MEM_FENCE);\n\n");
-	PfAppendLine(sc);
-#elif(VKFFT_BACKEND==5)
-	sc->tempLen = sprintf(sc->tempStr, "threadgroup_barrier(mem_flags::mem_none);\n\n");
-	PfAppendLine(sc);
-#endif
 	return;
 }
 #endif

@@ -24,6 +24,10 @@
 #include "pfSolve_Structs/pfSolve_Structs.h"
 
 static inline void deleteAxis(PfSolveApplication* app, PfSolveAxis* axis) {
+	if (app->configuration.keepShaderCode) {
+		free(axis->specializationConstants.code0);
+		axis->specializationConstants.code0 = 0;
+	}
 	if (axis->specializationConstants.numRaderPrimes) {
 		free(axis->specializationConstants.raderContainer);
 		axis->specializationConstants.raderContainer = 0;

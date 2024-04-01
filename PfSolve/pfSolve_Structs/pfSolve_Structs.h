@@ -951,6 +951,7 @@ typedef struct {
 	int supportAxis;
 	int cacheShuffle;
 	int registerBoost;
+	int logicalWarpSize;
 	int warpSize;
 	int numSharedBanks;
 	int resolveBankConflictFirstStages;

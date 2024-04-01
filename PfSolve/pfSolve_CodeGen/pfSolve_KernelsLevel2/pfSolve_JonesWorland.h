@@ -99,80 +99,90 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
 		sc->M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)sc->M_size.data.i)));
 		sc->inputBufferId = i;
-		if (sc->performTriSolve == 2)
-		{
-			sc->upperBanded = !sc->upperBanded;
-		}
-
-		sc->md_zero = 0;
-		if (sc->upperBanded) {
+		if (sc->upperBanded == 2) {
+			sc->md_zero = 0;
+			sc->ld_zero = 0;
 			sc->ud_zero = 0;
-			sc->ld_zero = 1;
-
-			sc->offset_ud.data.i = sc->M_size.data.i;
-
-			if (sc->offsetM.type > 100) {
-				sc->offset_md_global.type = 100 + sc->uintTypeCode;
-				PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-				sprintf(sc->offset_md_global.name, "offset_md_global");
-				PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
-
-				sc->offset_ud_global.type = 100 + sc->uintTypeCode;
-				PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
-				sprintf(sc->offset_ud_global.name, "offset_lud_global");
-				PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
-
-				PfAdd(sc, &sc->offset_md_global, &sc->offsetM, &sc->M_size);
-				PfMov(sc, &sc->offset_ud_global, &sc->offsetM);
-			}
-			else {
-				if (i == 0) {
-					sc->offset_md_global.data.i = 0;// sc->offsetM.data.i;
-					sc->offset_ud_global.data.i = sc->M_size.data.i;//  sc->offsetM.data.i + sc->M_size.data.i;
-				}
-				else {
-					sc->offset_ud_global.data.i = 0;//  sc->offsetM.data.i + sc->M_size.data.i;
-					sc->md_zero = 1;
-				}
-			}
+			sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+			sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+			sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetM.data.i;
 		}
 		else {
-			sc->ud_zero = 1;
-			sc->ld_zero = 0;
-			sc->offset_ld.data.i = sc->M_size.data.i;
+			if (sc->performTriSolve == 2)
+			{
+				sc->upperBanded = !sc->upperBanded;
+			}
 
-			if (sc->offsetM.type > 100) {
-				sc->offset_md_global.type = 100 + sc->uintTypeCode;
-				PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-				sprintf(sc->offset_md_global.name, "offset_md_global");
-				PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
+			sc->md_zero = 0;
+			if (sc->upperBanded) {
+				sc->ud_zero = 0;
+				sc->ld_zero = 1;
 
-				sc->offset_ld_global.type = 100 + sc->uintTypeCode;
-				PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
-				sprintf(sc->offset_ld_global.name, "offset_lud_global");
-				PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
+				sc->offset_ud.data.i = sc->M_size.data.i;
 
-				PfAdd(sc, &sc->offset_ld_global, &sc->offsetM, &sc->M_size);
-				PfMov(sc, &sc->offset_md_global, &sc->offsetM);
+				if (sc->offsetM.type > 100) {
+					sc->offset_md_global.type = 100 + sc->uintTypeCode;
+					PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
+					sprintf(sc->offset_md_global.name, "offset_md_global");
+					PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
+
+					sc->offset_ud_global.type = 100 + sc->uintTypeCode;
+					PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
+					sprintf(sc->offset_ud_global.name, "offset_lud_global");
+					PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
+
+					PfAdd(sc, &sc->offset_md_global, &sc->offsetM, &sc->M_size);
+					PfMov(sc, &sc->offset_ud_global, &sc->offsetM);
+				}
+				else {
+					if (i == 0) {
+						sc->offset_md_global.data.i = 0;// sc->offsetM.data.i;
+						sc->offset_ud_global.data.i = sc->M_size.data.i;//  sc->offsetM.data.i + sc->M_size.data.i;
+					}
+					else {
+						sc->offset_ud_global.data.i = 0;//  sc->offsetM.data.i + sc->M_size.data.i;
+						sc->md_zero = 1;
+					}
+				}
 			}
 			else {
-				if (i == (sc->numConsecutiveJWIterations-1)){
-					sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
-					sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
-				}else{
-					sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
-					sc->md_zero = 1;
+				sc->ud_zero = 1;
+				sc->ld_zero = 0;
+				sc->offset_ld.data.i = sc->M_size.data.i;
+
+				if (sc->offsetM.type > 100) {
+					sc->offset_md_global.type = 100 + sc->uintTypeCode;
+					PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
+					sprintf(sc->offset_md_global.name, "offset_md_global");
+					PfDefine(sc, &sc->offset_md_global, sc->offset_md_global.name);
+
+					sc->offset_ld_global.type = 100 + sc->uintTypeCode;
+					PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
+					sprintf(sc->offset_ld_global.name, "offset_lud_global");
+					PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
+
+					PfAdd(sc, &sc->offset_ld_global, &sc->offsetM, &sc->M_size);
+					PfMov(sc, &sc->offset_md_global, &sc->offsetM);
+				}
+				else {
+					if (i == (sc->numConsecutiveJWIterations - 1)) {
+						sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+						sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+					}
+					else {
+						sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+						sc->md_zero = 1;
+					}
+
 				}
 
 			}
 
+			if (sc->performTriSolve == 2)
+			{
+				sc->upperBanded = !sc->upperBanded;
+			}
 		}
-
-		if (sc->performTriSolve == 2)
-		{
-			sc->upperBanded = !sc->upperBanded;
-		}
-		
 		if((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)){
 			appendGlobalToShared_mat_ParallelThomas(sc);
 			appendBarrierPfSolve(sc); //this shouldn't be needed, but it is?
@@ -217,66 +227,67 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				PfDeallocateContainer(sc, &sc->offset_ld_global);
 			}
 		}
-		sc->offset_md_global.type = 31;
-		sc->offset_ud_global.type = 31;
-		sc->offset_ld_global.type = 31;
 
-		sc->offset_md.data.i = 0;
-		sc->offset_res.data.i = 2 * sc->M_size.data.i;
-		//sc->offset_res_global.data.i = sc->offsetSolution.data.i;
-		if (sc->upperBanded) {
-			sc->ud_zero = 1;
-			sc->ld_zero = 0;
-			sc->offset_ld.data.i = sc->M_size.data.i;
+		if (sc->upperBanded != 2) {
+			sc->offset_md_global.type = 31;
+			sc->offset_ud_global.type = 31;
+			sc->offset_ld_global.type = 31;
+			sc->offset_md.data.i = 0;
+			sc->offset_res.data.i = 2 * sc->M_size.data.i;
+			//sc->offset_res_global.data.i = sc->offsetSolution.data.i;
+			if (sc->upperBanded) {
+				sc->ud_zero = 1;
+				sc->ld_zero = 0;
+				sc->offset_ld.data.i = sc->M_size.data.i;
 
-			if (sc->offsetV.type > 100) {
-				sc->offset_ld_global.type = 100 + sc->uintTypeCode;
-				PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
-				sprintf(sc->offset_ld_global.name, "offset_lud_global");
-				if (sc->offsetM.type < 100)
-					PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
+				if (sc->offsetV.type > 100) {
+					sc->offset_ld_global.type = 100 + sc->uintTypeCode;
+					PfAllocateContainerFlexible(sc, &sc->offset_ld_global, 50);
+					sprintf(sc->offset_ld_global.name, "offset_lud_global");
+					if (sc->offsetM.type < 100)
+						PfDefine(sc, &sc->offset_ld_global, sc->offset_ld_global.name);
 
-				PfMov(sc, &sc->offset_ld_global, &sc->offsetV);
+					PfMov(sc, &sc->offset_ld_global, &sc->offsetV);
+				}
+				else {
+					//sc->offset_ld_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
+					if (i == 0)
+						sc->offset_ld_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+					else
+						sc->offset_ld_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
+				}
 			}
 			else {
-				//sc->offset_ld_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
-				if (i == 0)
-					sc->offset_ld_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
-				else
-					sc->offset_ld_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
-			}
-		}
-		else {
-			sc->ud_zero = 0;
-			sc->ld_zero = 1;
-			sc->offset_ud.data.i = sc->M_size.data.i;
+				sc->ud_zero = 0;
+				sc->ld_zero = 1;
+				sc->offset_ud.data.i = sc->M_size.data.i;
 
-			if (sc->offsetV.type > 100) {
-				/*PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
-				sc->offset_md_global.type = 100 + sc->uintTypeCode;
-				sprintf(sc->offset_md_global.name, "offset_md_global");
-				if (sc->offsetM.type < 100)
-					PfDefine(sc, &sc->offset_md_global);*/
+				if (sc->offsetV.type > 100) {
+					/*PfAllocateContainerFlexible(sc, &sc->offset_md_global, 50);
+					sc->offset_md_global.type = 100 + sc->uintTypeCode;
+					sprintf(sc->offset_md_global.name, "offset_md_global");
+					if (sc->offsetM.type < 100)
+						PfDefine(sc, &sc->offset_md_global);*/
 
-				sc->offset_ud_global.type = 100 + sc->uintTypeCode;
-				PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
-				sprintf(sc->offset_ud_global.name, "offset_lud_global");
-				if (sc->offsetM.type < 100)
-					PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
+					sc->offset_ud_global.type = 100 + sc->uintTypeCode;
+					PfAllocateContainerFlexible(sc, &sc->offset_ud_global, 50);
+					sprintf(sc->offset_ud_global.name, "offset_lud_global");
+					if (sc->offsetM.type < 100)
+						PfDefine(sc, &sc->offset_ud_global, sc->offset_ud_global.name);
 
-				//PfAdd(sc, &sc->offset_md_global, &sc->offsetV, &sc->M_size);
-				PfMov(sc, &sc->offset_ud_global, &sc->offsetV);
+					//PfAdd(sc, &sc->offset_md_global, &sc->offsetV, &sc->M_size);
+					PfMov(sc, &sc->offset_ud_global, &sc->offsetV);
+				}
+				else {
+					//sc->offset_md_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
+					if (i == (sc->numConsecutiveJWIterations - 1))
+						sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
+					else
+						sc->offset_ud_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
+				}
 			}
-			else {
-				//sc->offset_md_global.data.i = sc->offsetV.data.i + sc->M_size.data.i;
-				if (i == (sc->numConsecutiveJWIterations-1))
-					sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetV.data.i;
-				else
-					sc->offset_ud_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
-			}
-		}
-		sc->md_zero = 1;
-		if (sc->performTriSolve!= 2) {
+
+			sc->md_zero = 1;
 			if (sc->performTriSolve != 2)
 			{
 				if ((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)) {
@@ -285,16 +296,21 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				else
 					appendGlobalToRegisters_mat_ParallelThomas(sc);
 			}
+
+			if ((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload))
+				appendBarrierPfSolve(sc);
 		}
-		if ((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)) 
-			appendBarrierPfSolve(sc);
+		else {
+			sc->md_zero = 1;
+			sc->ld_zero = 0;
+			sc->ud_zero = 0;
+		}
 		if (sc->performTriSolve) {
 			if(sc->useParallelThomas)
 				appendTridiagonalSolve_ParallelThomas(sc);
 			else
 				appendTridiagonalSolve_PCR(sc);
 		}
-
 		if (sc->upperBanded) {
 			if (sc->offsetV.type > 100) {
 				//PfDeallocateContainer(sc, &sc->offset_md_global);

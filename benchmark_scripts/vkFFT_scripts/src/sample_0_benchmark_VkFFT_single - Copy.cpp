@@ -10,7 +10,7 @@
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
-//#define USE_MPIR
+#define USE_MPIR
 #if(VKFFT_BACKEND==0)
 #include "vulkan/vulkan.h"
 #include "glslang_c_interface.h"
@@ -72,26 +72,22 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 	if (file_output)
 		fprintf(output, "0 - PfSolve PCR test\n");
 	printf("0 - PfSolve PCR test\n");
-	const int num_runs = 100;
+	const int num_runs = 1;
 	float benchmark_result = 0;//averaged result = sum(system_size/iteration_time)/num_benchmark_samples
 	//memory allocated on the CPU once, makes benchmark completion faster + avoids performance issues connected to frequent allocation/deallocation.
 	printf("size GPU_L2 CPU_L2 - GPU_MAX CPU_MAX\n");
 			
-	for (uint64_t s = 1; s < 20; s++) {
-		for (uint64_t n = 2; n < 4097; n++) {
-		//printf("%d size GPU_L2 CPU_L2 - GPU_MAX CPU_MAX\n", n);
+	for (uint64_t n = 1; n < 2; n++) {
+		printf("%d size GPU_L2 CPU_L2 - GPU_MAX CPU_MAX\n", n);
 		float run_time[num_runs];
-		double L2_norm[num_runs][2];
-		double max_norm[num_runs][2];
-		double dominance_metric[num_runs];
-		for (uint64_t r = 0; r < num_runs; r++) {
+		for (uint64_t r = 0; r < 1; r++) {
 			//Configuration + FFT application .
 			PfSolveConfiguration configuration = {};
 			PfSolveApplication app = {};
 			//FFT + iFFT sample code.
 			//Setting up FFT configuration for forward and inverse FFT.
 			configuration.FFTdim = 1; //FFT dimension, 1D, 2D or 3D (default 1).
-			configuration.M_size = n;// 1 + r;// 16 + 16 * (n % 128); //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
+			configuration.M_size = 250;// 1 + r;// 16 + 16 * (n % 128); //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
 			configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)configuration.M_size)));; //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
 			configuration.size[0] = configuration.M_size; //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.  
 			configuration.size[1] = 1;
@@ -100,14 +96,14 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			configuration.jw_type = 13;
 			configuration.doublePrecision = 1;
 			configuration.isOutputFormatted = 1;
-			//configuration.keepShaderCode = 1;
+			configuration.keepShaderCode = 1;
 			int* x;
 			int** y;
 			y = &x;
 			//configuration.aimThreads = 32;
 			configuration.numConsecutiveJWIterations = 1;
 			configuration.useMultipleInputBuffers = 1;
-			configuration.jw_control_bitmask = 0;// (RUNTIME_OFFSETSOLUTION + RUNTIME_INPUTZEROPAD + RUNTIME_OUTPUTZEROPAD + RUNTIME_INPUTBUFFERSTRIDE + RUNTIME_OUTPUTBUFFERSTRIDE);// (RUNTIME_SCALEC);
+			configuration.jw_control_bitmask = (RUNTIME_OFFSETSOLUTION + RUNTIME_INPUTZEROPAD + RUNTIME_OUTPUTZEROPAD + RUNTIME_INPUTBUFFERSTRIDE + RUNTIME_OUTPUTBUFFERSTRIDE);// (RUNTIME_SCALEC);
 			//configuration.JW_sequential = 1;
 			//configuration.JW_parallel = 1;
 			configuration.outputBufferStride[0] = configuration.size[0];
@@ -118,7 +114,7 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			//cudaStreamCreate(&hStream);
 			//configuration.stream = &hStream;
 			//configuration.num_streams = 1;
-			//configuration.disableCaching = 1;
+			configuration.disableCaching = 1;
 			//After this, configuration file contains pointers to Vulkan objects needed to work with the GPU: VkDevice* device - created device, [uint64_t *bufferSize, VkBuffer *buffer, VkDeviceMemory* bufferDeviceMemory] - allocated GPU memory FFT is performed on. [uint64_t *kernelSize, VkBuffer *kernel, VkDeviceMemory* kernelDeviceMemory] - allocated GPU memory, where kernel for convolution is stored.
 			configuration.device = &vkGPU->device;
 #if(VKFFT_BACKEND==0)
@@ -131,73 +127,12 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			configuration.platform = &vkGPU->platform;
 			configuration.context = &vkGPU->context;
 #endif
-
 			//Allocate buffer for the input data.
 			uint64_t bufferSolveSize;
 			uint64_t bufferSolveResSize;
 
 			bufferSolveSize = (uint64_t)sizeof(double) * 3 * configuration.size[0];
 			bufferSolveResSize = (uint64_t)sizeof(double) * configuration.size[0] * configuration.size[1] * configuration.size[2];
-
-			//Fill data on CPU. It is best to perform all operations on GPU after initial upload.
-			int l = 100;// 2 * configuration.size[0];
-			double* buffer_input_matrix[100];
-
-			double* buffer_input_matrix_gpu[100];
-			for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
-				buffer_input_matrix[t] = (double*)calloc(bufferSolveSize, 1);
-				buffer_input_matrix_gpu[t] = (double*)calloc(bufferSolveSize, 1);
-			}
-
-			double scale = 0.1 * s;
-			double target_scale = 0.1 * s;
-			double min_dominance_metric = 2;
-			double max_dominance_metric = 0;
-			//while ((abs(min_dominance_metric - target_scale) > (target_scale/100)) && (abs(max_dominance_metric - target_scale) > (target_scale/100))) {
-			/*while (abs(max_dominance_metric - target_scale) >(target_scale / 10)) {
-				min_dominance_metric = 2;
-				max_dominance_metric = 0;
-				for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
-					for (uint64_t i = 0; i < configuration.size[0]; i++) {
-						buffer_input_matrix[t][configuration.size[0] + i] = 1.0 + scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						buffer_input_matrix[t][i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						buffer_input_matrix[t][2 * configuration.size[0] + i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						if (i == 0) buffer_input_matrix[t][i] = 0;
-						if (i == (configuration.size[0] - 1)) buffer_input_matrix[t][2 * configuration.size[0] + i] = 0;
-						double dominance_metric = (abs(buffer_input_matrix[t][i]) + abs(buffer_input_matrix[t][2 * configuration.size[0] + i])) / abs(buffer_input_matrix[t][configuration.size[0] + i]);
-						if (dominance_metric < min_dominance_metric) min_dominance_metric = dominance_metric;
-						if (dominance_metric > max_dominance_metric) max_dominance_metric = dominance_metric;
-						//printf("%.17e %.17e %.17e\n", buffer_input_matrix[t][i], buffer_input_matrix[t][tempM + i], buffer_input_matrix[t][2 * tempM + i]);
-					}
-				}
-			}*/
-			max_dominance_metric = 0;
-			for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
-				for (uint64_t i = 0; i < configuration.size[0]; i++) {
-					//min_dominance_metric = 2;
-					double temp_dominance_metric = 100;
-					while (temp_dominance_metric > (target_scale + target_scale / 100)) {
-						buffer_input_matrix[t][configuration.size[0] + i] = 1.0 + scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						buffer_input_matrix[t][i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						buffer_input_matrix[t][2 * configuration.size[0] + i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						if (i == 0) buffer_input_matrix[t][i] = 0;
-						if (i == (configuration.size[0] - 1)) buffer_input_matrix[t][2 * configuration.size[0] + i] = 0;
-						double dominance_metric = (abs(buffer_input_matrix[t][i]) + abs(buffer_input_matrix[t][2 * configuration.size[0] + i])) / abs(buffer_input_matrix[t][configuration.size[0] + i]);
-						temp_dominance_metric = dominance_metric;
-					}
-					if (temp_dominance_metric > max_dominance_metric) max_dominance_metric = temp_dominance_metric;
-					//printf("%.17e %.17e %.17e\n", buffer_input_matrix[t][i], buffer_input_matrix[t][configuration.size[0] + i], buffer_input_matrix[t][2 * configuration.size[0] + i]);
-				}
-			}
-			//printf("\n| %f %f\n\n", max_dominance_metric, min_dominance_metric);
-			/*for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
-				for (uint64_t i = 0; i < configuration.size[0]; i++) {
-					printf("%.17e %.17e %.17e\n", buffer_input_matrix[t][i], buffer_input_matrix[t][configuration.size[0] + i], buffer_input_matrix[t][2 * configuration.size[0] + i]);
-				}
-			}
-			printf("\n", max_dominance_metric, min_dominance_metric);*/
-			buffer_input_matrix[0][0] = 0;// need to add conditional there
-			buffer_input_matrix[0][3 * configuration.size[0] - 1] = 0;// need to add conditional there
 
 #if(VKFFT_BACKEND==0)
 			VkBuffer bufferSolve = {};
@@ -249,17 +184,19 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			configuration.bufferSize = &bufferSolveSize;
 			configuration.outputBufferSize = &bufferSolveResSize;
 
+			//Fill data on CPU. It is best to perform all operations on GPU after initial upload.
+			int l = 100;// 2 * configuration.size[0];
+			double* buffer_input_matrix[100];
+
+			double* buffer_input_matrix_gpu[100];
+			for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
+				buffer_input_matrix[t] = (double*)calloc(bufferSolveSize, 1);
+				buffer_input_matrix_gpu[t] = (double*)calloc(bufferSolveSize, 1);
+			}
+
 			int64_t tempM = configuration.size[0];
 			if (!configuration.upperBanded) tempM += (configuration.numConsecutiveJWIterations - 1);
-			int warpSize = 32;
-
-			warpSize = ((uint64_t)ceil(n / (double)(1024))) * 64;
-			if (n < 512) warpSize = 32;
-			if (warpSize < 32) warpSize = 32;
-			if (warpSize % 32) warpSize = 32 * ((warpSize + 32 - 1)/warpSize);
-	
-			//if (axis->specializationConstants.logicalWarpSize % 32) axis->specializationConstants.logicalWarpSize = 32 * ((axis->specializationConstants.logicalWarpSize + app->configuration.warpSize - 1)/app->configuration.warpSize);
-	
+			int warpSize = 64;
 			int used_registers = (uint64_t)ceil(tempM / (double)warpSize);
 
 			tempM = configuration.size[0];
@@ -271,6 +208,17 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 					buffer_input_matrix[t][2 * tempM + i] = nu(i, -0.5, l - 0.5 + 1);// / mu(i, -0.5, l - 0.5 + 1);// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 				}
 			}*/
+			double scale = 0.05*n;
+			for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
+				for (uint64_t i = 0; i < tempM; i++) {
+					buffer_input_matrix[t][tempM + i] = 1.0 + scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
+					buffer_input_matrix[t][i] = scale* (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
+					buffer_input_matrix[t][2 * tempM + i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
+					//printf("%.17e %.17e %.17e\n", buffer_input_matrix[t][i], buffer_input_matrix[t][tempM + i], buffer_input_matrix[t][2 * tempM + i]);
+				}
+			}
+			buffer_input_matrix[0][0] = 0;// need to add conditional there
+			buffer_input_matrix[0][3 * tempM-1] = 0;// need to add conditional there
 
 #ifdef USE_MPIR
 			mpf_set_default_prec(128);
@@ -358,8 +306,8 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 
 			mpf_t* ress0 = (mpf_t*)malloc(sizeof(mpf_t) * configuration.size[0] * configuration.size[1]);
 			mpf_t* input0 = (mpf_t*)malloc(sizeof(mpf_t) * configuration.size[0] * configuration.size[1]);
-			mpf_t* buffer_input_matrix0 = (mpf_t*)malloc(3 * sizeof(mpf_t) * configuration.size[0]);
-			mpf_t* temp_matrix0 = (mpf_t*)malloc(3 * sizeof(mpf_t) * configuration.size[0]);
+			mpf_t* buffer_input_matrix0 = (mpf_t*)malloc(4 * sizeof(mpf_t) * configuration.size[0]);
+			mpf_t* temp_matrix0 = (mpf_t*)malloc(4 * sizeof(mpf_t) * configuration.size[0]);
 			for (uint64_t j = 0; j < configuration.size[0] * configuration.size[1]; j++) {
 				mpf_init(ress0[j]);
 				mpf_init(input0[j]);
@@ -381,13 +329,13 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 
 				mpf_mul(temp, buffer_input_matrix0[j], temp_matrix0[2 * tempM + j - 1]);
 				mpf_sub(temp, buffer_input_matrix0[tempM + j], temp);
-				mpf_mul(temp0, buffer_input_matrix0[j], ress0[j - 1]);
+				mpf_mul(temp0, buffer_input_matrix0[j], ress0[j-1]);
 				mpf_sub(temp0, input0[j], temp0);
 				mpf_div(ress0[j], temp0, temp);
 			}
 
-			for (int64_t j = tempM - 2; j >= 0; j--) {
-				mpf_mul(temp, temp_matrix0[2 * tempM + j], ress0[j + 1]);
+			for (int64_t j = tempM-2; j >= 0; j--) {
+				mpf_mul(temp, temp_matrix0[2 * tempM + j], ress0[j+1]);
 				mpf_sub(ress0[j], ress0[j], temp);
 			}
 			tempM = configuration.size[0];
@@ -400,11 +348,11 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			ress2[0] = input[0] / buffer_input_matrix[0][tempM];
 			for (int64_t j = 1; j < tempM; j++) {
 				temp_matrix[2 * tempM + j] = buffer_input_matrix[0][2 * tempM + j] / (buffer_input_matrix[0][tempM + j] - buffer_input_matrix[0][j] * temp_matrix[2 * tempM + j - 1]);
-				ress2[j] = (input[j] - buffer_input_matrix[0][j] * ress2[j - 1]) / (buffer_input_matrix[0][tempM + j] - buffer_input_matrix[0][j] * temp_matrix[2 * tempM + j - 1]);
+				ress2[j] = (input[j] - buffer_input_matrix[0][j] * ress2[j-1]) / (buffer_input_matrix[0][tempM + j] - buffer_input_matrix[0][j] * temp_matrix[2 * tempM + j - 1]);
 			}
 
-			for (int64_t j = tempM - 2; j >= 0; j--) {
-				ress2[j] = ress2[j] - temp_matrix[2 * tempM + j] * ress2[j + 1];
+			for (int64_t j = tempM-2; j >= 0; j--) {
+				ress2[j] = ress2[j] - temp_matrix[2 * tempM + j] * ress2[j+1];
 			}
 
 			for (uint64_t j = 0; j < configuration.size[0]; j++) {
@@ -425,8 +373,6 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			free(input0);
 			free(buffer_input_matrix0);
 			free(temp_matrix0);
-
-			free(temp_matrix);
 #else
 			tempM = configuration.size[0];
 			double* temp_matrix = (double*)malloc(bufferSolveSize);
@@ -438,16 +384,15 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			ress[0] = input[0] / buffer_input_matrix[0][tempM];
 			for (int64_t j = 1; j < tempM; j++) {
 				temp_matrix[2 * tempM + j] = buffer_input_matrix[0][2 * tempM + j] / (buffer_input_matrix[0][tempM + j] - buffer_input_matrix[0][j] * temp_matrix[2 * tempM + j - 1]);
-				ress[j] = (input[j] - buffer_input_matrix[0][j] * ress[j - 1]) / (buffer_input_matrix[0][tempM + j] - buffer_input_matrix[0][j] * temp_matrix[2 * tempM + j - 1]);
+				ress[j] = (input[j] - buffer_input_matrix[0][j] * ress[j-1]) / (buffer_input_matrix[0][tempM + j] - buffer_input_matrix[0][j] * temp_matrix[2 * tempM + j - 1]);
 			}
 
-			for (int64_t j = tempM - 2; j >= 0; j--) {
-				ress[j] = ress[j] - temp_matrix[2 * tempM + j] * ress[j + 1];
+			for (int64_t j = tempM-2; j >= 0; j--) {
+				ress[j] = ress[j] - temp_matrix[2 * tempM + j] * ress[j+1];
 			}
 			for (int64_t j = 0; j < tempM; j++) {
 				ress2[j] = ress[j];
 			}
-			free(temp_matrix);
 #endif
 			// 
 			//PfSolve_AppLibrary appLibrary = {};
@@ -615,7 +560,6 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			//double resSUM2_cu = 0;
 			//double resSUM3_cu = 0;
 			double resGPUMAX = 0;
-			double abs_val = 0;
 			for (uint64_t l = 0; l < configuration.size[2]; l++) {
 				for (uint64_t j = 0; j < configuration.size[1]; j++) {
 					for (uint64_t i = 0; i < configuration.size[0]; i++) {
@@ -649,13 +593,13 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 							resCPU += buffer_input_matrix[0][i + 2 * configuration.size[0]] * ress2[(i + 1 + j * configuration.size[0])];
 						if (i > 0)
 							resCPU += buffer_input_matrix[0][i] * ress2[(i - 1 + j * configuration.size[0])];
-
+						
 						resGPU += buffer_input_matrix[0][i + configuration.size[0]] * output_PfSolve[(i + j * configuration.size[0])];
 						if (i < configuration.size[0] - 1)
 							resGPU += buffer_input_matrix[0][i + 2 * configuration.size[0]] * output_PfSolve[(i + 1 + j * configuration.size[0])];
 						if (i > 0)
 							resGPU += buffer_input_matrix[0][i] * output_PfSolve[(i - 1 + j * configuration.size[0])];
-
+						
 						/*if (configuration.upperBanded != 1) {
 							resMUL2_cu += buffer_input_matrix[i + 3 * configuration.size[0]] * output_cuFFT[(i + j * configuration.size[0])];
 							if (i < configuration.size[0] - 1)
@@ -670,7 +614,7 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 						//resMUL3_cu = (ress[(i + j * configuration.size[0])]- output_cuFFT[(i + j * configuration.size[0])])* (ress[(i + j * configuration.size[0])] - output_cuFFT[(i + j * configuration.size[0])]);
 						resCPU2 = (ress[(i + j * configuration.size[0])] - ress2[(i + j * configuration.size[0])]) * (ress[(i + j * configuration.size[0])] - ress2[(i + j * configuration.size[0])]);
 						//printf("%.17e %.17e %.17e %.17e\n", resGPU, resCPU, resCPU_mpir, buffer_input_systems[i + j * configuration.size[0]]);
-						//printf("%.17e %.17e %.17e\n", output_PfSolve[(i + j * configuration.size[0])], ress2[(i + j * configuration.size[0])], ress[(i + j * configuration.size[0])]);
+						printf("%.17e %.17e %.17e\n", output_PfSolve[(i + j * configuration.size[0])], ress2[(i + j * configuration.size[0])], ress[(i + j * configuration.size[0])]);
 						if (i > 0) {
 							//resCPUSUM += sqrt((resCPU - buffer_input_systems[i + j * configuration.size[0]]) * (resCPU - buffer_input_systems[i + j * configuration.size[0]])) / abs(buffer_input_systems[i + j * configuration.size[0]]);
 							//resGPUSUM += sqrt((resGPU - buffer_input_systems[i + j * configuration.size[0]]) * (resGPU - buffer_input_systems[i + j * configuration.size[0]])) / abs(buffer_input_systems[i + j * configuration.size[0]]);
@@ -678,14 +622,14 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 							//resCPUSUM += sqrt((resCPU - buffer_input_systems[i + j * configuration.size[0]]) * (resCPU - buffer_input_systems[i + j * configuration.size[0]])) / abs(buffer_input_systems[i + j * configuration.size[0]]);
 							//resGPUSUM += sqrt((resGPU - buffer_input_systems[i + j * configuration.size[0]]) * (resGPU - buffer_input_systems[i + j * configuration.size[0]])) / abs(buffer_input_systems[i + j * configuration.size[0]]);
 						}
-						resCPUSUM += resCPU2;// / (ress[(i + j * configuration.size[0])] * ress[(i + j * configuration.size[0])]);
-						resGPUSUM += resGPU2;// / (ress[(i + j * configuration.size[0])] * ress[(i + j * configuration.size[0])]);
-						abs_val += (ress[(i + j * configuration.size[0])] * ress[(i + j * configuration.size[0])]);
+						resCPUSUM += (sqrt(resCPU2) / abs(ress[(i + j * configuration.size[0])]));
+						resGPUSUM += (sqrt(resGPU2) / abs(ress[(i + j * configuration.size[0])]));
+
 						resCPUMAX = ((sqrt(resCPU2) / abs(ress[(i + j * configuration.size[0])])) > resCPUMAX) ? (sqrt(resCPU2) / abs(ress[(i + j * configuration.size[0])])) : resCPUMAX;
 
 						//resSUM2_cu += sqrt((resMUL2 - buffer_input_systems[i + j * configuration.size[0]]) * (resMUL2 - buffer_input_systems[i + j * configuration.size[0]]));
 						//resSUM3_cu = (sqrt(resMUL3) > resSUM3) ? sqrt(resMUL3) : resSUM3;
-						resGPUMAX = ((sqrt(resGPU2) / abs(ress[(i + j * configuration.size[0])])) > resGPUMAX) ? (sqrt(resGPU2) / abs(ress[(i + j * configuration.size[0])])) : resGPUMAX;
+						resGPUMAX = ((sqrt(resGPU2) / ress[(i + j * configuration.size[0])]) > resGPUMAX) ? (sqrt(resGPU2) / ress[(i + j * configuration.size[0])]) : resGPUMAX;
 						//printf("%f \n", output_PfSolve[(i + j * configuration.size[0])]);
 
 					}
@@ -698,14 +642,9 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			//printf("res pcr vk = %.17f\n", resSUM2);
 			//printf("res pcr cu = %.17f\n", resSUM2_cu);
 			//printf("max res gpu - 128b = %.17f\n", resSUM3);
-			dominance_metric[r] = max_dominance_metric;
-			L2_norm[r][0] = (double)(sqrt(resGPUSUM/abs_val));// (double)(sqrt(resGPUSUM) / (configuration.size[0] * configuration.size[1]));
-			L2_norm[r][1] = (double)(sqrt(resCPUSUM/abs_val));// (double)(sqrt(resCPUSUM) / (configuration.size[0] * configuration.size[1]));
+			//printf("max res cpu bs - 128b = %.17f\n", resSUM4);
 			
-			max_norm[r][0] = (double)resGPUMAX;
-			max_norm[r][1] = (double)resCPUMAX;
-
-			//printf("%d %.3e %.3e - %.3e %.3e\n", configuration.size[0], (double)(resGPUSUM / (configuration.size[0] * configuration.size[1])), (double)(resCPUSUM / (configuration.size[0] * configuration.size[1])), (double)resGPUMAX, (double)resCPUMAX);
+			printf("%d %.3e %.3e - %.3e %.3e\n", configuration.size[0], (double)(resGPUSUM / (configuration.size[0] * configuration.size[1])), (double)(resCPUSUM / (configuration.size[0] * configuration.size[1])), (double)resGPUMAX, (double)resCPUMAX);
 			//printf("time 1 = %.6f time %d = %.6f\n",totTime, num_iter, totTime2/num_iter);
 			//printf("size  = %d MB, time at peak bw = %f ms\n", 2*bufferSolveResSize/1024/1024, 2*bufferSolveResSize/1024.0/1024.0/1024.0/1200.0*1000.0);
 			free(buffer_input_systems);
@@ -716,19 +655,18 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 			}
 			free(ress);
 			free(ress2);
-			free(output_PfSolve);
 #if(VKFFT_BACKEND==0)
 			vkDestroyBuffer(vkGPU->device, bufferSolve, NULL);
 			vkFreeMemory(vkGPU->device, bufferSolveDeviceMemory, NULL);
 			vkDestroyBuffer(vkGPU->device, bufferSolveRes, NULL);
 			vkFreeMemory(vkGPU->device, bufferSolveResDeviceMemory, NULL);
 #elif(VKFFT_BACKEND==1)
-			for (int i = 0; i < configuration.numConsecutiveJWIterations; i++) {
+			for (int i = 0; i < configuration.numConsecutiveJWIterations; i++){
 				cudaFree(bufferSolve[i]);
 			}
 			cudaFree(bufferSolveRes);
 #elif(VKFFT_BACKEND==2)
-			for (int i = 0; i < configuration.numConsecutiveJWIterations; i++) {
+			for (int i = 0; i < configuration.numConsecutiveJWIterations; i++){
 				hipFree(bufferSolve[i]);
 			}
 			hipFree(bufferSolveRes);
@@ -740,58 +678,6 @@ PfSolveResult sample_0_benchmark_VkFFT_single(VkGPU* vkGPU, uint64_t file_output
 				deletePfSolve(&app);
 			}
 
-		}
-		double max_L2_norm_GPU = 0;
-		double max_L2_norm_CPU = 0;
-		double max_max_norm_GPU = 0;
-		double max_max_norm_CPU = 0;
-		double avg_L2_norm_GPU = 0;
-		double avg_L2_norm_CPU = 0;
-		double avg_max_norm_GPU = 0;
-		double avg_max_norm_CPU = 0;
-		double eps_L2_norm_GPU = 0;
-		double eps_L2_norm_CPU = 0;
-		double eps_max_norm_GPU = 0;
-		double eps_max_norm_CPU = 0;
-
-		double avg_dominance_metric = 0;
-		double eps_dominance_metric = 0;
-		for (uint64_t r = 0; r < num_runs; r++) {
-			if (max_L2_norm_GPU < L2_norm[r][0]) max_L2_norm_GPU = L2_norm[r][0];
-			if (max_L2_norm_CPU < L2_norm[r][1]) max_L2_norm_CPU = L2_norm[r][1];
-			if (max_max_norm_GPU < max_norm[r][0]) max_max_norm_GPU = max_norm[r][0];
-			if (max_max_norm_CPU < max_norm[r][1]) max_max_norm_CPU = max_norm[r][1];
-
-			avg_L2_norm_GPU += L2_norm[r][0];
-			avg_L2_norm_CPU += L2_norm[r][1];
-			avg_max_norm_GPU += max_norm[r][0];
-			avg_max_norm_CPU += max_norm[r][1];
-			avg_dominance_metric += dominance_metric[r];
-			//printf("%e %e\n", L2_norm[r][0], L2_norm[r][1]);
-		}
-		avg_L2_norm_GPU /= num_runs;
-		avg_L2_norm_CPU /= num_runs;
-		avg_max_norm_GPU /= num_runs;
-		avg_max_norm_CPU /= num_runs;
-		avg_dominance_metric /= num_runs;
-
-		for (uint64_t r = 0; r < num_runs; r++) {
-			eps_L2_norm_GPU += ((avg_L2_norm_GPU - L2_norm[r][0]) * (avg_L2_norm_GPU - L2_norm[r][0]));
-			eps_L2_norm_CPU += ((avg_L2_norm_CPU - L2_norm[r][1]) * (avg_L2_norm_CPU - L2_norm[r][1]));
-			eps_max_norm_GPU += ((avg_max_norm_GPU - max_norm[r][0]) * (avg_max_norm_GPU - max_norm[r][0]));
-			eps_max_norm_CPU += ((avg_max_norm_CPU - max_norm[r][1]) * (avg_max_norm_CPU - max_norm[r][1]));
-			eps_dominance_metric += ((avg_dominance_metric - dominance_metric[r]) * (avg_dominance_metric - dominance_metric[r]));
-		}
-		eps_L2_norm_GPU = sqrt(eps_L2_norm_GPU);
-		eps_L2_norm_CPU = sqrt(eps_L2_norm_CPU);
-		eps_max_norm_GPU = sqrt(eps_max_norm_GPU);
-		eps_max_norm_CPU = sqrt(eps_max_norm_CPU);
-		eps_L2_norm_GPU /= num_runs;
-		eps_L2_norm_CPU /= num_runs;
-		eps_max_norm_GPU /= num_runs;
-		eps_max_norm_CPU /= num_runs;
-		printf("%d %d  df %.2e %.2e (%.1f %%) | maxL2 %.2e %.2e avgL2 %.2e %.2e epsL2 %.2e %.2e (%.1f %.1f %%) || maxMax %.2e %.2e avgMax %.2e %.2e epsMax %.2e %.2e (%.1f %.1f %%)\n", (int)s, (int)n, avg_dominance_metric, eps_dominance_metric, 100* eps_dominance_metric/avg_dominance_metric, max_L2_norm_GPU, max_L2_norm_CPU, avg_L2_norm_GPU, avg_L2_norm_CPU, eps_L2_norm_GPU, eps_L2_norm_CPU, 100*eps_L2_norm_GPU/avg_L2_norm_GPU, 100*eps_L2_norm_CPU/avg_L2_norm_CPU,  max_max_norm_GPU, max_max_norm_CPU, avg_max_norm_GPU, avg_max_norm_CPU, eps_max_norm_GPU, eps_max_norm_CPU, 100*eps_max_norm_GPU/avg_max_norm_GPU, 100*eps_max_norm_CPU/avg_max_norm_CPU);
-			
 		}
 	}
 	return resFFT;

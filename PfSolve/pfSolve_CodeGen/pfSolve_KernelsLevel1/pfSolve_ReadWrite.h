@@ -1565,15 +1565,20 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
 	uint64_t used_registers = sc->registers_per_thread;//(sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
-	
-	PfMov(sc, &sc->inoutID, &sc->warpInvocationID);
+	if (sc->num_warps_data_parallel > 1) 
+		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int);
+	else
+		PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
 	for (uint64_t i = 0; i < used_registers; i++) {
 		uint64_t activeThreads = (sc->M_size.data.i + used_registers - 1) / used_registers;
 
 		if (((activeThreads - 1) * used_registers + i) >= sc->M_size.data.i) activeThreads--;
 
 		temp_int.data.i = activeThreads;
-		PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+		if (sc->num_warps_data_parallel > 1) 
+			PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+		else
+			PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
 		if ((!sc->md_zero) && (((sc->inputBufferId == 0) && (!sc->ud_zero)) || ((sc->inputBufferId == (sc->numConsecutiveJWIterations-1)) && (!sc->ld_zero)) || (sc->numConsecutiveJWIterations == 1))) {
 			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->offset_md_global);
@@ -1682,22 +1687,10 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 	temp_int.type = 31;
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
-	if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
-		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
-			if (i > 0) {
-				temp_int.data.i = sc->warpSize;
-				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
-			}
-		}else{
-			temp_int.data.i = i * sc->num_threads;
-			PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
-		}
-		
+		temp_int.data.i = i * sc->num_threads;
+		PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
+
 		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
@@ -1799,11 +1792,6 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 	PfContainer temp_double = {};
 	temp_double.type = 32;
 
-	if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
-		temp_int.data.i = sc->warpSize * sc->registers_per_thread;
-		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
-		PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &sc->tempInt);
-	}
 	if (sc->num_warps_data_parallel > 1) {
 		temp_int.data.i = sc->num_warps_data_parallel;
 		PfMul(sc, &sc->inoutID_y, &sc->gl_WorkGroupID_x, &temp_int, 0);
@@ -1812,18 +1800,12 @@ static inline void appendReadWrite_rd(PfSolveSpecializationConstantsLayout* sc, 
 	} 
 	
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
-		if ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)) {
-			if (i > 0) {
-				temp_int.data.i = sc->warpSize;
-				PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
-			}
-		}else{
-			temp_int.data.i = i * sc->num_threads;
-			if (sc->num_warps_data_parallel > 1) 
-				PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int);
-			else
-				PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
-		}
+		temp_int.data.i = i * sc->num_threads;
+		if (sc->num_warps_data_parallel > 1) 
+			PfAdd(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int);
+		else
+			PfAdd(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x, &temp_int);
+
 		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
@@ -1894,21 +1876,33 @@ static inline void appendReadWrite_rd_uncoalesced(PfSolveSpecializationConstants
 	temp_int.data.i = sc->registers_per_thread;
 	PfMul(sc, &sc->inoutID, &sc->warpInvocationID, &temp_int, 0);
 
+	if (sc->num_warps_data_parallel > 1) {
+		temp_int.data.i = sc->num_warps_data_parallel;
+		PfMul(sc, &sc->inoutID_y, &sc->gl_WorkGroupID_x, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID_y, &sc->inoutID_y, &sc->warpID);
+		PfMul(sc, &sc->inoutID_z, &sc->inoutID_y, &sc->outputStride[1], 0);
+	}
 	for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 		if (i > 0) {
 			temp_int.data.i = sc->num_threads / sc->warpSize;
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
 		PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
-
+		if (sc->num_warps_data_parallel > 1) {
+			PfIf_lt_start(sc, &sc->inoutID_y, &sc->size[1]);
+		}
 		int control_zp = 0;
 		PfConfigureZeropad(sc, &sc->inoutID, &control_zp, readWrite);
 		temp_int.data.i = 0;
 		if (control_zp) PfIf_gt_start(sc, &sc->tempInt, &temp_int);
 
 		//sc->tempLen = sprintf(sc->tempStr, "	res_%" PRIu64 " = %s%s[inoutID + %s*%" PRIu64 "+%" PRIu64 "]%s;\n", i, sc->convTypeLeftInput, sc->inputsStructRes, sc->gl_WorkGroupID_x, sc->outputStride[2].x_num, sc->offset_res_global, sc->convTypeRightInput);
-		PfMul(sc, &sc->tempInt, &sc->gl_WorkGroupID_x, &sc->outputStride[1], 0);
-		PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->tempInt);
+		if (sc->num_warps_data_parallel > 1) 
+			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->inoutID_z);
+		else{
+			PfMul(sc, &sc->tempInt, &sc->gl_WorkGroupID_x, &sc->outputStride[1], 0);
+			PfAdd(sc, &sc->tempInt, &sc->inoutID, &sc->tempInt);
+		}
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->offset_res_global);
 		if (sc->readToRegisters || sc->writeFromRegisters) {
 			if (readWrite)
@@ -1938,6 +1932,9 @@ static inline void appendReadWrite_rd_uncoalesced(PfSolveSpecializationConstants
 			}
 		}
 		if (control_zp) PfIf_end(sc);
+		if (sc->num_warps_data_parallel > 1) {
+			PfIf_end(sc);
+		}
 		PfIf_end(sc);
 	}
 	return;
