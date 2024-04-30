@@ -228,7 +228,7 @@ typedef struct {
 
 	
 	int upperBanded;
-	int64_t M_size_pow2;
+	//int64_t M_size_pow2;
 
 	int jw_type;
 	int block;
@@ -236,6 +236,7 @@ typedef struct {
 	int LDA; 
 	int KU;
 	int KL;
+	uint64_t Msplit[3];
 
 	int64_t jw_control_bitmask;
 
@@ -1089,6 +1090,7 @@ typedef struct {
 	PfContainer temp2;
 	PfContainer tempInt;
 	PfContainer tempInt2;
+	PfContainer numActiveThreads;
 	PfContainer tempFloat;
 	PfContainer tempFloat2;
 	PfContainer tempQuad;
@@ -1265,8 +1267,8 @@ typedef struct {
 typedef struct {
 	uint64_t actualFFTSizePerAxis[3][3];
 	uint64_t numAxisUploads[3];
-	uint64_t axisSplit[3][4];
-	PfSolveAxis axes[3][4];
+	uint64_t axisSplit[3][11];
+	PfSolveAxis axes[3][11];
 
 	uint64_t multiUploadR2C;
 	uint64_t actualPerformR2CPerAxis[3]; // automatically specified, shows if R2C is actually performed or inside FFT or as a separate step

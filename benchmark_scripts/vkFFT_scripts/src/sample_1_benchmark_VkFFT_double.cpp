@@ -20,7 +20,7 @@
 #include <nvrtc.h>
 #include <cuda_runtime_api.h>
 #include <cuComplex.h>
-#include <cuSparse.h>
+#include <cusparse.h>
 //#include <cusparse_v2.h>
 #elif(VKFFT_BACKEND==2)
 #ifndef __HIP_PLATFORM_HCC__
@@ -30,6 +30,7 @@
 #include <hip/hiprtc.h>
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_complex.h>
+#include <hipsparse/hipsparse.h>
 #elif(VKFFT_BACKEND==3)
 #ifndef CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
@@ -2112,18 +2113,6 @@ double nu(double n, double alpha, double beta) {
 	return sqrt(2 * (n + 1) * (n + alpha + 1) / (2 * n + alpha + beta + 1) / (2 * n + alpha + beta + 2));
 }
 
-int reorder_i(int i, int M_size, int warpSize, int used_registers) {
-	int ret = i / used_registers;
-	if ((i % used_registers) < (M_size% used_registers)) {
-		ret += (i % used_registers) * ((M_size + used_registers - 1) / used_registers);
-	}
-	else
-	{
-		ret += (M_size% used_registers) * ((M_size + used_registers - 1) / used_registers);
-		ret += ((i % used_registers) - (M_size % used_registers)) * (M_size / used_registers);
-	}
-	return ret;
-}
 PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output, FILE* output, uint64_t isCompilerInitialized)
 {
 	PfSolveResult resFFT = PFSOLVE_SUCCESS;
@@ -2144,8 +2133,10 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 	//memory allocated on the CPU once, makes benchmark completion faster + avoids performance issues connected to frequent allocation/deallocation.
 	//printf("size GPU_L2 CPU_L2 - GPU_MAX CPU_MAX\n");
 	uint64_t batchsizes[9] = { 10,50,100,250,500,1000,5000,10000,100000 };
-	for (uint64_t t = 0; t < 9; t++) {
-		for (uint64_t n = 16; n < 4096; n+=16) {
+	for (uint64_t t = 6; t < 7; t++) {
+		uint64_t step = 4;
+		for (uint64_t n = 16; n < 3000000000; n+=step) {
+			if (n / step == 8) step*=2;
 			float run_time[num_runs][2];
 			for (uint64_t r = 0; r < num_runs; r++) {
 				//Configuration + FFT application .
@@ -2155,14 +2146,19 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				//Setting up FFT configuration for forward and inverse FFT.
 				configuration.FFTdim = 1; //FFT dimension, 1D, 2D or 3D (default 1).
 				configuration.M_size = n;// 1 + r;// 16 + 16 * (n % 128); //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
-				configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)configuration.M_size)));; //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
+				//configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)configuration.M_size)));; //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.   
 				configuration.size[0] = configuration.M_size; //Multidimensional FFT dimensions sizes (default 1). For best performance (and stability), order dimensions in descendant size order as: x>y>z.  
-				configuration.size[1] = batchsizes[t];
+				configuration.size[1] = (uint64_t)ceil(1024.0 * 1024.0 * 1024.0/((double)configuration.size[0]*8.0));
+				if (configuration.size[1] > batchsizes[t]) configuration.size[1] = batchsizes[t];
+				if (configuration.size[1] < 4) configuration.size[1] = 4;
+				//printf("%d\n", configuration.size[1]);
 				configuration.size[2] = 1;
 				configuration.scaleC = 1;
 				configuration.jw_type = 13;
 				configuration.doublePrecision = 1;
 				configuration.isOutputFormatted = 1;
+				//configuration.Msplit[0] = 832;
+				//if (n >= 3200000) configuration.Msplit[0] = 1920;
 				//configuration.keepShaderCode = 1;
 				int* x;
 				int** y;
@@ -2170,12 +2166,13 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				//configuration.aimThreads = 32;
 				configuration.numConsecutiveJWIterations = 1;
 				configuration.useMultipleInputBuffers = 1;
-				configuration.jw_control_bitmask = 0;// (RUNTIME_OFFSETSOLUTION + RUNTIME_INPUTZEROPAD + RUNTIME_OUTPUTZEROPAD + RUNTIME_INPUTBUFFERSTRIDE + RUNTIME_OUTPUTBUFFERSTRIDE);// (RUNTIME_SCALEC);
+				configuration.jw_control_bitmask = RUNTIME_OUTPUTBUFFERSTRIDE;// (RUNTIME_OFFSETSOLUTION + RUNTIME_INPUTZEROPAD + RUNTIME_OUTPUTZEROPAD + RUNTIME_INPUTBUFFERSTRIDE + RUNTIME_OUTPUTBUFFERSTRIDE);// (RUNTIME_SCALEC);
 				//configuration.JW_sequential = 1;
 				//configuration.JW_parallel = 1;
 				configuration.outputBufferStride[0] = configuration.size[0];
 				//configuration.performWorland = 1;
 				configuration.upperBanded = 2;
+				int stride = 128;
 				//configuration.offsetV = 2 * configuration.size[0];
 				//CUstream hStream;
 				//cudaStreamCreate(&hStream);
@@ -2197,10 +2194,10 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				//Allocate buffer for the input data.
 				uint64_t bufferSolveSize;
 				uint64_t bufferSolveResSize;
-
-				bufferSolveSize = (uint64_t)sizeof(double) * 3 * configuration.size[0];
-				bufferSolveResSize = (uint64_t)sizeof(double) * configuration.size[0] * configuration.size[1] * configuration.size[2];
-
+				uint64_t bufferSolveResSize2;
+				bufferSolveSize = (uint64_t)sizeof(double) * 3 * (configuration.size[0]);
+				bufferSolveResSize = (uint64_t)sizeof(double) * (configuration.size[0]+stride) * configuration.size[1] * configuration.size[2];
+				bufferSolveResSize2 = (uint64_t)sizeof(double) * (configuration.size[0]+stride) * configuration.size[1] * configuration.size[2];
 #if(VKFFT_BACKEND==0)
 				VkBuffer bufferSolve = {};
 				VkDeviceMemory bufferSolveDeviceMemory = {};
@@ -2211,20 +2208,31 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				resFFT = allocateBuffer(vkGPU, &bufferSolveRes, &bufferSolveResDeviceMemory, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_HEAP_DEVICE_LOCAL_BIT, bufferSolveResSize);
 				if (resFFT != PFSOLVE_SUCCESS) return resFFT;
 #elif(VKFFT_BACKEND==1)
-				double** bufferSolve = (double**)calloc(configuration.numConsecutiveJWIterations, sizeof(cuDoubleComplex*));
+				double** bufferSolve = (double**)calloc(configuration.numConsecutiveJWIterations, sizeof(double*));
 				for (int i = 0; i < configuration.numConsecutiveJWIterations; i++)
 					res = cudaMalloc((void**)&bufferSolve[i], bufferSolveSize);
 				if (res != cudaSuccess) return PFSOLVE_ERROR_FAILED_TO_ALLOCATE;
 				double* bufferSolveRes = 0;
 				res = cudaMalloc((void**)&bufferSolveRes, bufferSolveResSize);
 				if (res != cudaSuccess) return PFSOLVE_ERROR_FAILED_TO_ALLOCATE;
+				
+				double* tempBuffer = 0;
+				res = cudaMalloc((void**)&tempBuffer, bufferSolveResSize);
+				if (res != cudaSuccess) return PFSOLVE_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==2)
-				hipDoubleComplex** bufferSolve = (hipDoubleComplex**)calloc(configuration.numConsecutiveJWIterations, sizeof(hipDoubleComplex*));
+				double** bufferSolve = (double**)calloc(configuration.numConsecutiveJWIterations, sizeof(double*));
 				for (int i = 0; i < configuration.numConsecutiveJWIterations; i++)
 					res = hipMalloc((void**)&bufferSolve[i], bufferSolveSize);
+				//printf("%" PRIu64 "\n", bufferSolveSize);
 				if (res != hipSuccess) return PFSOLVE_ERROR_FAILED_TO_ALLOCATE;
-				hipDoubleComplex* bufferSolveRes = 0;
+				double* bufferSolveRes = 0;
 				res = hipMalloc((void**)&bufferSolveRes, bufferSolveResSize);
+				//printf("%" PRIu64 "\n", bufferSolveResSize);
+				if (res != hipSuccess) return PFSOLVE_ERROR_FAILED_TO_ALLOCATE;
+				
+				double* tempBuffer = 0;
+				res = hipMalloc((void**)&tempBuffer, bufferSolveResSize2);
+				//printf("%" PRIu64 "\n", bufferSolveResSize);
 				if (res != hipSuccess) return PFSOLVE_ERROR_FAILED_TO_ALLOCATE;
 #elif(VKFFT_BACKEND==3)
 				cl_mem bufferSolve = 0;
@@ -2241,15 +2249,27 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 #elif(VKFFT_BACKEND==1)
 				configuration.buffer = (void**)bufferSolve;
 				configuration.outputBuffer = (void**)&bufferSolveRes;
+				configuration.kernel = (void**)&tempBuffer;
 #elif(VKFFT_BACKEND==2)
 				configuration.buffer = (void**)bufferSolve;
 				configuration.outputBuffer = (void**)&bufferSolveRes;
+				configuration.kernel = (void**)&tempBuffer;
 #elif(VKFFT_BACKEND==3)
 				configuration.buffer = &bufferSolve;
 				configuration.outputBuffer = &bufferSolveRes;
 #endif
 				configuration.bufferSize = &bufferSolveSize;
 				configuration.outputBufferSize = &bufferSolveResSize;
+#if(VKFFT_BACKEND==1)
+				int warpSize0 = 32;
+#elif(VKFFT_BACKEND==2)
+				int warpSize0 = 64;
+#endif
+				int warpSize = warpSize0;
+				warpSize = ((uint64_t)ceil(n / (double)(1024))) * 64;
+				if (n < 512) warpSize = warpSize0;
+				if (warpSize < warpSize0) warpSize = warpSize0;
+				if (warpSize % warpSize0) warpSize = warpSize0 * ((warpSize + warpSize0 - 1)/warpSize);
 
 				//Fill data on CPU. It is best to perform all operations on GPU after initial upload.
 				int l = 100;// 2 * configuration.size[0];
@@ -2265,7 +2285,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				if (!configuration.upperBanded) tempM += (configuration.numConsecutiveJWIterations - 1);
 				int used_registers = (uint64_t)ceil(tempM / 32.0);
 
-				tempM = configuration.size[0];
+				tempM = (configuration.size[0]);
 
 				/*for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
 					for (uint64_t i = 0; i < tempM; i++) {
@@ -2277,14 +2297,14 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				double scale = 0.05 * n;
 				for (int t = 0; t < configuration.numConsecutiveJWIterations; t++) {
 					for (uint64_t i = 0; i < tempM; i++) {
-						buffer_input_matrix[t][tempM + i] = 1.0 + scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
+						buffer_input_matrix[t][(configuration.size[0]) + i] = 1.0 + scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
 						buffer_input_matrix[t][i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
-						buffer_input_matrix[t][2 * tempM + i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
+						buffer_input_matrix[t][2 * (configuration.size[0]) + i] = scale * (double)(2 * ((double)rand()) / RAND_MAX - 1.0);
 						//printf("%.17e %.17e %.17e\n", buffer_input_matrix[t][i], buffer_input_matrix[t][tempM + i], buffer_input_matrix[t][2 * tempM + i]);
 					}
 				}
 				buffer_input_matrix[0][0] = 0;// need to add conditional there
-				buffer_input_matrix[0][3 * tempM - 1] = 0;// need to add conditional there
+				buffer_input_matrix[0][3 * (configuration.size[0]) - 1] = 0;// need to add conditional there
 #ifdef USE_MPIR
 				mpf_set_default_prec(128);
 				mpf_t temp_0;
@@ -2295,32 +2315,32 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 					mpf_set_d(temp_0, 1);
 					mpf_set_d(temp_1, buffer_input_matrix[0][tempM + i]);
 					mpf_div(temp_0, temp_0, temp_1);
-					buffer_input_matrix_gpu[0][tempM + reorder_i(i, configuration.size[0], 32, used_registers)] = mpf_get_d(temp_0);
+					buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
 
 					mpf_set_d(temp_0, buffer_input_matrix[0][i]);
-					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i(i, configuration.size[0], 32, used_registers)]);
+					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])]);
 					mpf_mul(temp_0, temp_0, temp_1);
-					buffer_input_matrix_gpu[0][reorder_i(i, configuration.size[0], 32, used_registers)] = mpf_get_d(temp_0);
+					buffer_input_matrix_gpu[0][reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
 
 					mpf_set_d(temp_0, buffer_input_matrix[0][2 * tempM + i]);
-					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i(i, configuration.size[0], 32, used_registers)]);
+					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])]);
 					mpf_mul(temp_0, temp_0, temp_1);
-					buffer_input_matrix_gpu[0][2 * tempM + reorder_i(i, configuration.size[0], 32, used_registers)] = mpf_get_d(temp_0);
+					buffer_input_matrix_gpu[0][2 * tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
 				}
 				mpf_clear(temp_0);
 				mpf_clear(temp_1);
 #else
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
-					buffer_input_matrix_gpu[0][tempM + reorder_i(i, configuration.size[0], 32, used_registers)] = 1.0 / buffer_input_matrix[0][tempM + i];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, 32, used_registers)];
-					buffer_input_matrix_gpu[0][reorder_i(i, configuration.size[0], 32, used_registers)] = buffer_input_matrix[0][i] * buffer_input_matrix_gpu[0][tempM + reorder_i(i, configuration.size[0], 32, used_registers)];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, 32, used_registers)];
-					buffer_input_matrix_gpu[0][2 * tempM + reorder_i(i, configuration.size[0], 32, used_registers)] = buffer_input_matrix[0][2 * tempM + i] * buffer_input_matrix_gpu[0][tempM + reorder_i(i, configuration.size[0], 32, used_registers)];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, 32, used_registers)];
+					buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = 1.0 / buffer_input_matrix[0][tempM + i];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
+					buffer_input_matrix_gpu[0][reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = buffer_input_matrix[0][i] * buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
+					buffer_input_matrix_gpu[0][2 * tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = buffer_input_matrix[0][2 * tempM + i] * buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
 				}
 #endif
 				double* buffer_input_systems = (double*)malloc(bufferSolveResSize);
 				//double* buffer_input_systems2 = (double*)malloc(bufferSolveResSize);
 				for (uint64_t j = 0; j < configuration.size[1]; j++) {
 					for (uint64_t i = 0; i < configuration.size[0]; i++) {
-						buffer_input_systems[i + j * configuration.size[0]] = (double)(2 * ((double)rand()) / RAND_MAX - 1.0);//x0[i];
+						buffer_input_systems[i + j * (configuration.size[0]+stride)] = (double)(2 * ((double)rand()) / RAND_MAX - 1.0);//x0[i];
 						//buffer_input_systems[i + j * configuration.size[0]] = buffer_input_systems2[i + j * configuration.size[0]];//x0[i];// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);// +i + j * configuration.size[0];// (float)(2 * ((float)rand()) / RAND_MAX - 1.0);
 					}
 				}
@@ -2506,7 +2526,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				if (num_iter >= 1000) num_iter = 1000;
 				//num_iter = 1;
 				double totTime = 0;
-				/*
+#if(VKFFT_BACKEND==1)
 				cusparseHandle_t csphandle;
 				cusparseStatus_t  cstat = cusparseCreate(&csphandle);
 				size_t bufferSizeExt;
@@ -2520,10 +2540,10 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 					cstat = cusparseDgtsv2_nopivot(csphandle, n, configuration.size[1], bufferSolve[0], (bufferSolve[0]+n), (bufferSolve[0]+2*n), (double*)bufferSolveRes, n, (void *)dev_buffer);
 				else
 					cstat = cusparseSgtsv2_nopivot(csphandle, n, configuration.size[1], (float*)bufferSolve[0], ((float*)bufferSolve[0]+n), ((float*)bufferSolve[0]+2*n), (float*)bufferSolveRes, n, (void *)dev_buffer);
-				
+					
 				cudaDeviceSynchronize();
-			
-				std::chrono::steady_clock::time_point timeSubmit = std::chrono::steady_clock::now();
+				
+				std::chrono::steady_clock::time_point timeSubmit0 = std::chrono::steady_clock::now();
 				for (uint64_t i = 0; i < num_iter; i++) {
 					if(configuration.doublePrecision)
 						cstat = cusparseDgtsv2_nopivot(csphandle, n, configuration.size[1], bufferSolve[0], (bufferSolve[0]+n), (bufferSolve[0]+2*n), (double*)bufferSolveRes, n, (void *)dev_buffer);
@@ -2531,12 +2551,46 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 						cstat = cusparseSgtsv2_nopivot(csphandle, n, configuration.size[1], (float*)bufferSolve[0], ((float*)bufferSolve[0]+n), ((float*)bufferSolve[0]+2*n), (float*)bufferSolveRes, n, (void *)dev_buffer);
 				}
 				cudaDeviceSynchronize();
-				std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();
-				double totTime_cuSparse = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeSubmit).count() * 0.001;
+				std::chrono::steady_clock::time_point timeEnd0 = std::chrono::steady_clock::now();
+				double totTime_cuSparse = std::chrono::duration_cast<std::chrono::microseconds>(timeEnd0 - timeSubmit0).count() * 0.001;
 				cudaFree(&dev_buffer);
 				cusparseDestroy(csphandle);
-				*/
-
+#elif(VKFFT_BACKEND==2)
+				/*hipsparseHandle_t csphandle;
+				hipsparseStatus_t  cstat = hipsparseCreate(&csphandle);
+				size_t bufferSizeExt;
+				if(configuration.doublePrecision)
+					cstat = hipsparseDgtsv2_nopivot_bufferSizeExt(csphandle, n, configuration.size[1], bufferSolve[0], (bufferSolve[0]+n), (bufferSolve[0]+2*n), (double*)bufferSolveRes, n, &bufferSizeExt);
+				else
+					cstat = hipsparseSgtsv2_nopivot_bufferSizeExt(csphandle, n, configuration.size[1], (float*)bufferSolve[0], ((float*)bufferSolve[0]+n), ((float*)bufferSolve[0]+2*n), (float*)bufferSolveRes, n, &bufferSizeExt);
+				unsigned char *dev_buffer;
+				hipMalloc(&dev_buffer, bufferSizeExt);
+				if(configuration.doublePrecision)
+					cstat = hipsparseDgtsv2_nopivot(csphandle, n, configuration.size[1], bufferSolve[0], (bufferSolve[0]+n), (bufferSolve[0]+2*n), (double*)bufferSolveRes, n, (void *)dev_buffer);
+				else
+					cstat = hipsparseSgtsv2_nopivot(csphandle, n, configuration.size[1], (float*)bufferSolve[0], ((float*)bufferSolve[0]+n), ((float*)bufferSolve[0]+2*n), (float*)bufferSolveRes, n, (void *)dev_buffer);
+				
+				hipDeviceSynchronize();
+			
+				std::chrono::steady_clock::time_point timeSubmit = std::chrono::steady_clock::now();
+				for (uint64_t i = 0; i < num_iter; i++) {
+					if(configuration.doublePrecision)
+						cstat = hipsparseDgtsv2_nopivot(csphandle, n, configuration.size[1], bufferSolve[0], (bufferSolve[0]+n), (bufferSolve[0]+2*n), (double*)bufferSolveRes, n, (void *)dev_buffer);
+					else
+						cstat = hipsparseSgtsv2_nopivot(csphandle, n, configuration.size[1], (float*)bufferSolve[0], ((float*)bufferSolve[0]+n), ((float*)bufferSolve[0]+2*n), (float*)bufferSolveRes, n, (void *)dev_buffer);
+				}
+				hipDeviceSynchronize();
+				std::chrono::steady_clock::time_point timeEnd = std::chrono::steady_clock::now();*/
+				double totTime_cuSparse = 0;//std::chrono::duration_cast<std::chrono::microseconds>(timeEnd - timeSubmit).count() * 0.001;
+				//hipFree(&dev_buffer);
+				//hipsparseDestroy(csphandle);
+#endif
+				//cusparseHandle_t handle;
+				//cusparseStatus_t resS= CUSPARSE_STATUS_SUCCESS;
+				//resS= cusparseCreate(&handle);
+				float* asas = 0;
+				//res = cudaMalloc((void**)&asas, 128*100000);
+				//resS = cusparseSgtsv2_nopivot(handle, 111, 10000, bufferSolve, bufferSolve, bufferSolve, bufferSolveRes, 111, asas);
 				PfSolveLaunchParams launchParams = {};
 #if(VKFFT_BACKEND==0)
 				launchParams.buffer = &bufferSolve;
@@ -2560,18 +2614,19 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				//launchParams.inputZeropad[1]--;
 				launchParams.outputZeropad[0] = 0;
 				launchParams.outputZeropad[1] = configuration.M_size;
-				launchParams.outputBufferStride = configuration.M_size;
+				launchParams.outputBufferStride = (configuration.size[0]+stride);
 				launchParams.inputBufferStride = configuration.M_size;
 				launchParams.scaleC = 1.0;
 
 				double totTime2 = 0;
-				cudaDeviceSynchronize();
+
 				//num_iter = 1;
 				resFFT = performVulkanFFT(vkGPU, &app, &launchParams, 0, num_iter, &totTime2);
 				if (resFFT != PFSOLVE_SUCCESS) return resFFT;
 				
 				run_time[r][0] = totTime2 / num_iter;
-				run_time[r][1] = 1;// totTime_cuSparse / num_iter;
+				run_time[r][1] = totTime_cuSparse / num_iter;
+				bufferSolveResSize = (uint64_t)sizeof(double) * (configuration.size[0]) * configuration.size[1] * configuration.size[2];
 				if (n > 0) {
 					if (r == num_runs - 1) {
 						double std_error[2] = { 0,0 };
@@ -2588,7 +2643,7 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 						}
 						std_error[0] = sqrt(std_error[0] / num_runs);
 						std_error[1] = sqrt(std_error[1] / num_runs);
-						printf("%" PRIu64 " %" PRIu64 " Buffer: %.3f MB - timePf %.3e us std_error %.3e %.1f %% us | timeCu %.3e us std_error %.3e %.1f %% us | num_iter: %" PRIu64 " bandwidth: %.3f GB/s | %.3f GB/s\n", n, batchsizes[t], bufferSolveResSize / 1024.0 / 1024.0, avg_time[0] * 1000, std_error[0] * 1000, 100 * std_error[0] / avg_time[0], avg_time[1] * 1000, std_error[1] * 1000, 100 * std_error[1] / avg_time[1], num_iter, 2 * bufferSolveResSize / 1024.0 / 1024.0 / 1.024 / avg_time[0], 2 * bufferSolveResSize / 1024.0 / 1024.0 / 1.024 / avg_time[1]);
+						printf("%" PRIu64 " %" PRIu64 " Buffer: %.3f MB - timePf %.3e us std_error %.3e %.1f %% us | timeCu %.3e us std_error %.3e %.1f %% us | num_iter: %" PRIu64 " bandwidth: %.3f GB/s | %.3f GB/s\n", n, configuration.size[1], bufferSolveResSize / 1024.0 / 1024.0, avg_time[0] * 1000, std_error[0] * 1000, 100 * std_error[0] / avg_time[0], avg_time[1] * 1000, std_error[1] * 1000, 100 * std_error[1] / avg_time[1], num_iter, 2 * bufferSolveResSize / 1024.0 / 1024.0 / 1.024 / avg_time[0], 2 * bufferSolveResSize / 1024.0 / 1024.0 / 1.024 / avg_time[1]);
 					}
 
 
@@ -2616,11 +2671,13 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 					cudaFree(bufferSolve[i]);
 				}
 				cudaFree(bufferSolveRes);
+				cudaFree(tempBuffer);
 #elif(VKFFT_BACKEND==2)
 				for (int i = 0; i < configuration.numConsecutiveJWIterations; i++) {
 					hipFree(bufferSolve[i]);
 				}
 				hipFree(bufferSolveRes);
+				hipFree(tempBuffer);
 #elif(VKFFT_BACKEND==3)
 				clReleaseMemObject(bufferSolve);
 				clReleaseMemObject(bufferSolveRes);
@@ -2630,6 +2687,18 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 				}
 
 			}
+			/*if (n < 128) {
+				n += 16;
+			}
+			else if (n < 512) {
+				n += 32;
+			}
+			else if (n < 2048) {
+				n += 64;
+			}
+			else{
+				n += 256;
+			}*/
 		}
 	}
 	return resFFT;

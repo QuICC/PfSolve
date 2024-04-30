@@ -81,7 +81,8 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.M_size.type = 31;
 	axis->specializationConstants.M_size.data.i = app->configuration.M_size;
 	axis->specializationConstants.M_size_pow2.type = 31;
-	axis->specializationConstants.M_size_pow2.data.i = app->configuration.M_size_pow2;
+	int64_t tempM = app->configuration.M_size;
+	axis->specializationConstants.M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)tempM)));
 
 	axis->specializationConstants.size[0].type = 31;
 	axis->specializationConstants.size[0].data.i = app->configuration.M_size;
@@ -91,7 +92,7 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.size[2].data.i = 1;
 	
 	axis->specializationConstants.jw_control_bitmask = app->configuration.jw_control_bitmask;
-	axis->specializationConstants.num_warps_data_parallel = 1;
+
 	
 	axis->specializationConstants.LDA = app->configuration.LDA;
 	axis->specializationConstants.KU = app->configuration.KU;

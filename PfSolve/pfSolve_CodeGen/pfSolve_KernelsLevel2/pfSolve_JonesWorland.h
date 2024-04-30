@@ -87,14 +87,24 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	}
 
 	sc->readToRegisters = 1;
-	if(sc->useUncoalescedJWTnoSharedMemory)
-		appendReadWrite_rd_uncoalesced(sc, 0);
-	else{
-		appendReadWrite_rd(sc, 0);
-		if(sc->useParallelThomas)
-			appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc);
+	if ((sc->axis_upload_id != 0) && (sc->axis_upload_id != (sc->numAxisUploads-1))) {
+		appendReadWrite_mat_rd_reduced(sc, 0);
+		//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->ud[0]);
+		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc, sc->ld);
+		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc, sc->ud);
+		appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc, sc->rd);
+		//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->ud[0]);
 	}
-
+	else {
+		if (sc->useUncoalescedJWTnoSharedMemory)
+			appendReadWrite_rd_uncoalesced(sc, 0);
+		else {
+			appendReadWrite_rd(sc, 0);
+			if (sc->useParallelThomas)
+				appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc, sc->rd);
+		}
+		
+	}
 	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
 		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
 		sc->M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)sc->M_size.data.i)));
@@ -103,9 +113,16 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			sc->md_zero = 0;
 			sc->ld_zero = 0;
 			sc->ud_zero = 0;
-			sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
-			sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
-			sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetM.data.i;
+			if (sc->numAxisUploads > 1) {
+				sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+				sc->offset_md_global.data.i = sc->size[0].data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+				sc->offset_ud_global.data.i = 2 * sc->size[0].data.i;// sc->offsetM.data.i;
+			}
+			else {
+				sc->offset_ld_global.data.i = 0;// sc->offsetM.data.i;
+				sc->offset_md_global.data.i = sc->M_size.data.i;;//  sc->offsetM.data.i + sc->M_size.data.i;
+				sc->offset_ud_global.data.i = 2 * sc->M_size.data.i;// sc->offsetM.data.i;
+			}
 		}
 		else {
 			if (sc->performTriSolve == 2)
@@ -198,6 +215,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			}
 			else
 				appendGlobalToRegisters_mat(sc);
+
 			//sc->read_SharedToRegisters = 0;
 			//sc->write_RegistersToShared=0;
 			if (sc->performTriSolve == 2)
@@ -214,7 +232,6 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			//sc->write_RegistersToShared=0;
 		}
 		//appendBarrier(sc);
-
 		if (sc->upperBanded) {
 			if (sc->offsetM.type > 100) {
 				PfDeallocateContainer(sc, &sc->offset_md_global);
@@ -309,7 +326,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			if(sc->useParallelThomas)
 				appendTridiagonalSolve_ParallelThomas(sc);
 			else
-				appendTridiagonalSolve_PCR(sc);
+				appendTridiagonalSolve_PCR_Thomas(sc);
 		}
 		if (sc->upperBanded) {
 			if (sc->offsetV.type > 100) {
@@ -332,12 +349,24 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 	//							
 	//						}
 	sc->writeFromRegisters = 1;
-	if(sc->useUncoalescedJWTnoSharedMemory)
-		appendReadWrite_rd_uncoalesced(sc, 1);
-	else{
-		if(sc->useParallelThomas)
-			appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc);
-		appendReadWrite_rd(sc, 1);
+	if ((sc->numAxisUploads > 1) && (sc->axis_upload_id < (sc->numAxisUploads/2))) {
+		appendWrite_mat_rd_for_reduced_kernel(sc, 1);
+	}
+	else if ((sc->numAxisUploads > 1) && (sc->axis_upload_id != (sc->numAxisUploads-1))) {
+		appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc, sc->rd);
+		
+		sc->ld_zero = 1;
+		sc->ud_zero = 1;
+		appendReadWrite_mat_rd_reduced(sc, 1);
+
+	}else {
+		if (sc->useUncoalescedJWTnoSharedMemory)
+			appendReadWrite_rd_uncoalesced(sc, 1);
+		else {
+			if (sc->useParallelThomas)
+				appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc, sc->rd);
+			appendReadWrite_rd(sc, 1);
+		}
 	}
 	PfDeallocateContainer(sc, &sc->offset_res_global);
 

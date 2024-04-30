@@ -4509,6 +4509,47 @@ static inline void PfSubgroupAdd(PfSolveSpecializationConstantsLayout* sc, PfCon
 	return;
 }
 
+static inline void PfSubgroupBroadcast(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in, int id) {
+	if (sc->res != PFSOLVE_SUCCESS) return;
+	if (sc->logicalWarpSize > sc->warpSize) {
+		PfContainer temp_int = PFSOLVE_ZERO_INIT;
+		temp_int.type = 31;
+		temp_int.data.i = id;
+		PfIf_eq_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+		sc->tempLen = sprintf(sc->tempStr, "\
+sdata[0] = %s;\n", in->name);
+		PfAppendLine(sc);
+		PfIf_end(sc);
+		appendBarrierPfSolve(sc);
+		sc->tempLen = sprintf(sc->tempStr, "\
+%s = sdata[0];\n", out->name);
+		PfAppendLine(sc);
+		appendBarrierPfSolve(sc);
+	}
+	else {
+		if (((out->type / 10) % 10) == 3) {
+			PfSubgroupBroadcast(sc, &out->data.dd[0], &in->data.dd[0], id);
+			PfSubgroupBroadcast(sc, &out->data.dd[1], &in->data.dd[1], id);
+		}
+		else {
+#if (VKFFT_BACKEND==0)
+			sc->tempLen = sprintf(sc->tempStr, "%s = subgroupAdd(%s);\n", out, in);
+			PfAppendLine(sc);
+
+#elif (VKFFT_BACKEND==1)
+			sc->tempLen = sprintf(sc->tempStr, "%s = __shfl_sync(0xffffffff, %s, %d);\n", out->name, in->name, id);
+			PfAppendLine(sc);
+
+#elif (VKFFT_BACKEND==2)
+			sc->tempLen = sprintf(sc->tempStr, "%s = __shfl_sync(%s, %d);\n", out->name, in->name, id);
+			PfAppendLine(sc);
+
+#endif
+		}
+	}
+	return;
+};
+
 static inline void PfSubgroupShuffleDown(PfSolveSpecializationConstantsLayout* sc, PfContainer* out, PfContainer* in, int stride) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	if (sc->logicalWarpSize > sc->warpSize) {

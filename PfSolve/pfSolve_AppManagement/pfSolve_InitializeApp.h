@@ -1145,26 +1145,8 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 		app->configuration.outputBufferSize = app->configuration.bufferSize;
 		app->configuration.outputBuffer = app->configuration.buffer;
 	}
-	if (app->configuration.performConvolution) {
-		if (inputLaunchConfiguration.kernelNum == 0)	app->configuration.kernelNum = 1;
-		else app->configuration.kernelNum = inputLaunchConfiguration.kernelNum;
-#if(VKFFT_BACKEND==0) 
-		if (inputLaunchConfiguration.kernelSize == 0) {
-			deletePfSolve(app);
-			return PFSOLVE_ERROR_EMPTY_kernelSize;
-		}
-#endif
-		app->configuration.kernelSize = inputLaunchConfiguration.kernelSize;
-		if (app->configuration.kernelSize != 0) {
-			for (uint64_t i = 0; i < app->configuration.kernelNum; i++) {
-				if (app->configuration.kernelSize[i] == 0) {
-					deletePfSolve(app);
-					return PFSOLVE_ERROR_EMPTY_kernelSize;
-				}
-			}
-		}
-		app->configuration.kernel = inputLaunchConfiguration.kernel;
-	}
+
+	app->configuration.kernel = inputLaunchConfiguration.kernel; //additional memory
 
 	app->configuration.finiteDifferences = inputLaunchConfiguration.finiteDifferences;
 	app->configuration.logicBlock[0] = inputLaunchConfiguration.logicBlock[0];
@@ -1184,9 +1166,7 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 	app->configuration.offsetSolution = inputLaunchConfiguration.offsetSolution;
 	app->configuration.upperBanded = inputLaunchConfiguration.upperBanded;
 	app->configuration.M_size = inputLaunchConfiguration.size[0];
-	int64_t tempM = app->configuration.M_size;
-	if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
-	app->configuration.M_size_pow2 = (int64_t)pow(2, (int)ceil(log2((double)tempM)));
+
 	app->configuration.inputZeropad[0] = inputLaunchConfiguration.inputZeropad[0];
 	app->configuration.inputZeropad[1] = inputLaunchConfiguration.inputZeropad[1];
 	app->configuration.outputZeropad[0] = inputLaunchConfiguration.outputZeropad[0];
@@ -1197,6 +1177,34 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 	app->configuration.scaleC = inputLaunchConfiguration.scaleC;
 	app->configuration.block = inputLaunchConfiguration.block;
 	app->configuration.lshift = inputLaunchConfiguration.lshift;
+
+	if (inputLaunchConfiguration.Msplit[0] != 0) app->configuration.Msplit[0] = inputLaunchConfiguration.Msplit[0];
+	else {
+#if(VKFFT_BACKEND==1)
+		app->configuration.Msplit[0] = 256;
+		/*if (app->configuration.size[0] < 3840 * 320) app->configuration.Msplit[0] = 320;
+		else if(app->configuration.size[0] < 3840*384) app->configuration.Msplit[0] = 384;
+		else if(app->configuration.size[0] < 3840*448) app->configuration.Msplit[0] = 448;
+		else if(app->configuration.size[0] < 3840*576) app->configuration.Msplit[0] = 576;
+		else if(app->configuration.size[0] < 3840*704) app->configuration.Msplit[0] = 704;
+		else if(app->configuration.size[0] < 3840*832) app->configuration.Msplit[0] = 832;*/
+#elif(VKFFT_BACKEND==2)
+		app->configuration.Msplit[0] = 704;
+		//if(app->configuration.size[0] < 3840*832) app->configuration.Msplit[0] = 832;
+#endif
+		//else app->configuration.Msplit[0] = 832;
+		/*else if (app->configuration.size[0] < 3840 * 960) app->configuration.Msplit[0] = 960;
+		else if (app->configuration.size[0] < 3840*1152) app->configuration.Msplit[0] = 1152;
+		else if (app->configuration.size[0] < 3840*1408) app->configuration.Msplit[0] = 1408;
+		else if (app->configuration.size[0] < 3840*1920) app->configuration.Msplit[0] = 1920;
+		else if (app->configuration.size[0] < 3840*2496) app->configuration.Msplit[0] = 2496;
+		else if (app->configuration.size[0] < 3840*3840) app->configuration.Msplit[0] = 3840;
+		else if (app->configuration.size[0] < 3840*4672) app->configuration.Msplit[0] = 4672;
+		else if (app->configuration.size[0] < 3840*5632) app->configuration.Msplit[0] = 5632;
+		else if (app->configuration.size[0] < 3840*6720) app->configuration.Msplit[0] = 6720;
+		else if (app->configuration.size[0] < 3840*7680) app->configuration.Msplit[0] = 7680;*/
+
+	}
 
 	app->configuration.LDA = inputLaunchConfiguration.LDA;
 	app->configuration.KU = inputLaunchConfiguration.KU;
@@ -1486,7 +1494,7 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 	//	sprintf(fname, "compute_flux_D_size_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "_logicblock_%" PRIu64 "_%" PRIu64 "_%" PRIu64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.size[2], app->configuration.logicBlock[0], app->configuration.logicBlock[1], app->configuration.logicBlock[2]);
 	//}
 	if (app->configuration.jw_type >= 10) {
-		sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "_%d_%d", app->configuration.size[0], app->configuration.size[1], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask, app->configuration.numConsecutiveJWIterations, app->configuration.useMultipleInputBuffers);
+		sprintf(app->kernelName, "PfSolve_jw_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "_%" PRIu64 "_%d_%d", app->configuration.size[0], app->configuration.size[1], app->configuration.upperBanded, app->configuration.jw_type, app->configuration.jw_control_bitmask, app->configuration.Msplit[0], app->configuration.numConsecutiveJWIterations, app->configuration.useMultipleInputBuffers);
 	}
 	if (app->configuration.block) {
 		sprintf(app->kernelName, "PfSolve_block_%" PRIu64 "_%" PRIu64 "_%d_%d_%" PRIi64 "", app->configuration.size[0], app->configuration.size[1], app->configuration.block, app->configuration.lshift, app->configuration.jw_control_bitmask);
@@ -1529,7 +1537,49 @@ static inline PfSolveResult initializePfSolve(PfSolveApplication* app, PfSolveCo
 		resFFT = PfSolve_Plan_FiniteDifferences(app, app->localFFTPlan);
 	}
 	if (app->configuration.jw_type >= 10) {
-		resFFT = PfSolve_Plan_JonesWorland(app, app->localFFTPlan);
+#if(VKFFT_BACKEND==1)
+		if (app->configuration.M_size <= 4352) {
+#elif(VKFFT_BACKEND==2)
+		if (app->configuration.M_size <= 3840) {
+#endif
+			app->localFFTPlan->numAxisUploads[0] = 1;
+			app->localFFTPlan->axisSplit[0][0] = app->configuration.M_size;
+		}
+		else if (app->configuration.M_size <= 256 * 3840) {
+			app->localFFTPlan->numAxisUploads[0] = 3;
+			app->localFFTPlan->axisSplit[0][0] = app->configuration.Msplit[0];
+			app->localFFTPlan->axisSplit[0][1] = 2*((app->configuration.M_size + app->localFFTPlan->axisSplit[0][0]-1)/app->localFFTPlan->axisSplit[0][0]);
+			app->localFFTPlan->axisSplit[0][2] = app->configuration.Msplit[0];
+		}
+		else {
+			app->configuration.Msplit[1] = 3840;
+			int64_t temp_calc = app->configuration.M_size;
+			app->localFFTPlan->numAxisUploads[0] = 1;
+			temp_calc = (temp_calc + app->configuration.Msplit[0] - 1) / app->configuration.Msplit[0];
+			app->localFFTPlan->numAxisUploads[0] += 2;
+			while (temp_calc > 1) {
+				temp_calc = (temp_calc + app->configuration.Msplit[1] - 1) / app->configuration.Msplit[1];
+				app->localFFTPlan->numAxisUploads[0] += 2;
+			}
+			app->localFFTPlan->numAxisUploads[0] -= 2;
+			temp_calc = app->configuration.M_size;
+			app->localFFTPlan->axisSplit[0][0] = app->configuration.Msplit[0];// app->configuration.Msplit[0];
+			temp_calc = 2 * ((temp_calc + app->localFFTPlan->axisSplit[0][0] - 1) / app->localFFTPlan->axisSplit[0][0]);
+
+			for (int i = 1; i < app->localFFTPlan->numAxisUploads[0] / 2; i++) {
+				app->localFFTPlan->axisSplit[0][i] = app->configuration.Msplit[1];// app->configuration.Msplit[0];
+				temp_calc = 2 * ((temp_calc + app->localFFTPlan->axisSplit[0][i] - 1) / app->localFFTPlan->axisSplit[0][i]);
+			}
+			app->localFFTPlan->axisSplit[0][app->localFFTPlan->numAxisUploads[0] / 2] = temp_calc;// 2 * ((2 * ((app->configuration.M_size + app->localFFTPlan->axisSplit[0][0] - 1) / app->localFFTPlan->axisSplit[0][0]) + app->localFFTPlan->axisSplit[0][1] - 1) / app->localFFTPlan->axisSplit[0][1]);
+			
+			for (int i = app->localFFTPlan->numAxisUploads[0] / 2 + 1; i < app->localFFTPlan->numAxisUploads[0]-1; i++) {
+				app->localFFTPlan->axisSplit[0][i] = app->configuration.Msplit[1];// app->configuration.Msplit[0];
+			}
+			app->localFFTPlan->axisSplit[0][app->localFFTPlan->numAxisUploads[0]-1] = app->configuration.Msplit[0];
+		}
+		for (uint64_t j = 0; j < app->localFFTPlan->numAxisUploads[0]; j++) {
+			resFFT = PfSolve_Plan_JonesWorland(app, app->localFFTPlan, j);
+		}
 	}
 	if (app->configuration.block) {
 		resFFT = PfSolve_Plan_block(app, app->localFFTPlan);

@@ -98,10 +98,12 @@ static inline PfSolveResult PfSolveAppend(PfSolveApplication* app, int inverse, 
 
 	res = PfSolveCheckUpdateBufferSet(app, 0, 0, launchParams);
 	if (res != PFSOLVE_SUCCESS) { return res; }
-	res = PfSolveUpdateBufferSet(app, app->localFFTPlan, app->localFFTPlan->axes[0], 0, 0, inverse);
-	if (res != PFSOLVE_SUCCESS) { return res; }
-	res = PfSolveUpdatePushConstants(app, &app->localFFTPlan->axes[0]->pushConstants, launchParams);
-	if (res != PFSOLVE_SUCCESS) { return res; }
+	for (int i = 0; i < app->localFFTPlan->numAxisUploads[0]; i++){
+		res = PfSolveUpdateBufferSet(app, app->localFFTPlan, &app->localFFTPlan->axes[0][i], 0, 0, inverse);
+		if (res != PFSOLVE_SUCCESS) { return res; }
+		res = PfSolveUpdatePushConstants(app, &app->localFFTPlan->axes[0][i].pushConstants, launchParams);
+		if (res != PFSOLVE_SUCCESS) { return res; }
+	}
 	uint64_t dispatchBlock[3];
 	dispatchBlock[1] = 1;
 	dispatchBlock[2] = 1;
@@ -111,7 +113,10 @@ static inline PfSolveResult PfSolveAppend(PfSolveApplication* app, int inverse, 
 		dispatchBlock[2] = (uint64_t)ceil(app->configuration.size[2] / (double)app->localFFTPlan->axes[0]->specializationConstants.logicBlock[2].data.i);
 	}
 	if (app->configuration.jw_type) {
-		dispatchBlock[0] = (uint64_t)ceil(app->configuration.size[1] / (double)app->localFFTPlan->axes[0]->specializationConstants.num_warps_data_parallel)* app->configuration.size[2];
+		if(app->localFFTPlan->numAxisUploads[0]==1)
+			dispatchBlock[0] = (uint64_t)ceil(app->configuration.size[1] / (double)app->localFFTPlan->axes[0]->specializationConstants.num_warps_data_parallel)* app->configuration.size[2];
+		else
+			dispatchBlock[0] = app->configuration.size[1] * (app->localFFTPlan->axes[0][1].specializationConstants.size[0].data.i /2);
 		dispatchBlock[1] = 1;// (uint64_t)ceil(app->configuration.size[1] / (double)app->localFFTPlan->axes[0]->specializationConstants.localSize[1].data.i);
 		dispatchBlock[2] = 1;// (uint64_t)ceil(app->configuration.size[2] / (double)app->localFFTPlan->axes[0]->specializationConstants.localSize[2].data.i);
 	}
@@ -126,9 +131,30 @@ static inline PfSolveResult PfSolveAppend(PfSolveApplication* app, int inverse, 
 	if(app->configuration.copy)
 		std::cerr << "copy  "<< std::endl;
 	*/
-	res = PfSolve_DispatchPlan(app, app->localFFTPlan->axes[0], dispatchBlock);
-	if (app->configuration.keepShaderCode) printf("%s\n", app->localFFTPlan->axes[0]->specializationConstants.code0);
-	if (res != PFSOLVE_SUCCESS) { return res; }
+	res = PfSolve_DispatchPlan(app, &app->localFFTPlan->axes[0][0], dispatchBlock);
+	if (app->configuration.keepShaderCode) printf("%s\n", app->localFFTPlan->axes[0][0].specializationConstants.code0);
+	if (res != PFSOLVE_SUCCESS) return res;
+
+	if ((app->configuration.jw_type) && (app->localFFTPlan->numAxisUploads[0] > 1)) {
+		for (int i = 1; i < (app->localFFTPlan->numAxisUploads[0]/2); i++) {
+			dispatchBlock[0] = app->configuration.size[1] * app->localFFTPlan->axes[0][i+1].specializationConstants.size[0].data.i /2;
+			res = PfSolve_DispatchPlan(app, &app->localFFTPlan->axes[0][i], dispatchBlock);
+			if (app->configuration.keepShaderCode) printf("%s\n", app->localFFTPlan->axes[0][i].specializationConstants.code0);
+			if (res != PFSOLVE_SUCCESS) return res;
+		}
+
+		dispatchBlock[0] = app->configuration.size[1];
+		res = PfSolve_DispatchPlan(app, &app->localFFTPlan->axes[0][app->localFFTPlan->numAxisUploads[0]/2], dispatchBlock);
+		if (app->configuration.keepShaderCode) printf("%s\n", app->localFFTPlan->axes[0][app->localFFTPlan->numAxisUploads[0]/2].specializationConstants.code0);
+		if (res != PFSOLVE_SUCCESS) return res;
+
+		for (int i = (app->localFFTPlan->numAxisUploads[0]/2 + 1); i < app->localFFTPlan->numAxisUploads[0]; i++) {
+			dispatchBlock[0] = app->configuration.size[1] * app->localFFTPlan->axes[0][i-1].specializationConstants.size[0].data.i /2;
+			res = PfSolve_DispatchPlan(app, &app->localFFTPlan->axes[0][i], dispatchBlock);
+			if (app->configuration.keepShaderCode) printf("%s\n", app->localFFTPlan->axes[0][i].specializationConstants.code0);
+			if (res != PFSOLVE_SUCCESS) return res;
+		}
+	}
 	return res;
 }
 #endif

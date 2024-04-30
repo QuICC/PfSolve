@@ -27,7 +27,80 @@
 #include "pfSolve_PlanManagement/pfSolve_API_handles/pfSolve_InitAPIParameters.h"
 #include "pfSolve_PlanManagement/pfSolve_API_handles/pfSolve_CompileKernel.h"
 #include "pfSolve_AppManagement/pfSolve_DeleteApp.h"
-static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, PfSolvePlan* plan) {
+
+static inline int reorder_i0(int i, int M_size, int Msplit0) {
+	if (Msplit0 == 0){
+#if(VKFFT_BACKEND==1)
+		Msplit0 = 256;
+		/*if (M_size < 3840 * 320) Msplit0 = 320;
+		else if(M_size < 3840*384) Msplit0 = 384;
+		else if(M_size < 3840*448) Msplit0 = 448;
+		else if(M_size < 3840*576) Msplit0 = 576;
+		else if(M_size < 3840*704) Msplit0 = 704;
+		else if(M_size < 3840*832) Msplit0 = 832;*/
+#elif(VKFFT_BACKEND==2)
+		Msplit0 = 704;
+		//if(M_size < 3840*832) Msplit0 = 832;
+#endif
+		/*else if (M_size < 3840 * 960) Msplit0 = 960;
+		else if (M_size < 3840*1152) Msplit0 = 1152;
+		else if (M_size < 3840*1408) Msplit0 = 1408;
+		else if (M_size < 3840*1920) Msplit0 = 1920;
+		else if (M_size < 3840*2496) Msplit0 = 2496;
+		else if (M_size < 3840*3840) Msplit0 = 3840;
+		else if (M_size < 3840*4672) Msplit0 = 4672;
+		else if (M_size < 3840*5632) Msplit0 = 5632;
+		else if (M_size < 3840*6720) Msplit0 = 6720;
+		else if (M_size < 3840*7680) Msplit0 = 7680;*/
+	}
+	int size_0 = M_size;
+	int size_1 = 1;
+	int used_registers = 0;
+#if(VKFFT_BACKEND==1)
+	if (M_size <= 4352) {
+#elif(VKFFT_BACKEND==2)
+	if (M_size <= 3840) {
+#endif
+	}
+	else {
+		size_0 = Msplit0;
+	}
+#if(VKFFT_BACKEND==1)
+	int warpSize0 = 32;
+#elif(VKFFT_BACKEND==2)
+	int warpSize0 = 64;
+#endif
+	int warpSize = ((uint64_t)ceil(size_0 / (double)(1024))) * 64;
+	if (size_0 < 512) warpSize = warpSize0;
+	if (warpSize < warpSize0) warpSize = warpSize0;
+	if (warpSize % warpSize0) warpSize = warpSize0 * ((warpSize + warpSize0 - 1)/warpSize0);
+	
+	used_registers = (size_0 + warpSize - 1)/ warpSize; //adjust
+#if(VKFFT_BACKEND==2)
+	if (used_registers % 2 == 0) used_registers++;
+#endif
+	size_1 = (M_size + size_0 - 1) / size_0;
+
+	int ret_offset = (i / size_0) * size_0;
+	int local_i = (i % size_0);
+
+	if ((((i / size_0) + 1) * size_0) > M_size) {
+		size_0 = M_size % size_0;
+	}
+	int ret = local_i / used_registers;
+	if ((local_i % used_registers) < (size_0 % used_registers)) {
+		ret += (local_i % used_registers) * ((size_0 + used_registers - 1) / used_registers);
+	}
+	else
+	{
+		ret += (size_0 % used_registers) * ((size_0 + used_registers - 1) / used_registers);
+		ret += ((local_i % used_registers) - (size_0 % used_registers)) * (size_0 / used_registers);
+	}
+	ret += ret_offset;
+	return ret;
+}
+
+static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, PfSolvePlan* plan, pfUINT axis_upload_id) {
 	//get radix stages
 	PfSolveResult res = PFSOLVE_SUCCESS;
 #if(VKFFT_BACKEND==0)
@@ -40,7 +113,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	cl_int result = CL_SUCCESS;
 #endif
 
-	PfSolveAxis* axis = plan->axes[0];
+	PfSolveAxis* axis = &plan->axes[0][axis_upload_id];
 
 	axis->specializationConstants.warpSize = app->configuration.warpSize;
 	axis->specializationConstants.numSharedBanks = app->configuration.numSharedBanks;
@@ -76,34 +149,43 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.numCoordinates = app->configuration.coordinateFeatures;
 	axis->specializationConstants.normalize = app->configuration.normalize;
 	axis->specializationConstants.axis_id = 0;
-	axis->specializationConstants.axis_upload_id = 0;
+	axis->specializationConstants.axis_upload_id = axis_upload_id;
 	axis->specializationConstants.LUT = 0;// app->configuration.useLUT;
 	//axis->specializationConstants.pushConstants = &axis->pushConstants;
 	axis->specializationConstants.M_size.type = 31;
-	axis->specializationConstants.M_size.data.i = app->configuration.M_size;
+	axis->specializationConstants.M_size.data.i = app->localFFTPlan->axisSplit[0][axis_upload_id];
 	axis->specializationConstants.M_size_pow2.type = 31;
-	axis->specializationConstants.M_size_pow2.data.i = app->configuration.M_size_pow2;
-	
+	int64_t tempM = axis->specializationConstants.M_size.data.i;
+	if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
+	axis->specializationConstants.M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)tempM)));
+
 	axis->specializationConstants.size[0].type = 31;
 	axis->specializationConstants.size[0].data.i = app->configuration.M_size;
+	if ((axis_upload_id>0) && (axis_upload_id <= (app->localFFTPlan->numAxisUploads[0] / 2))) {
+		axis->specializationConstants.size[0].data.i = 2 * ((app->localFFTPlan->axes[0][axis_upload_id - 1].specializationConstants.size[0].data.i + app->localFFTPlan->axisSplit[0][axis_upload_id - 1] - 1) / app->localFFTPlan->axisSplit[0][axis_upload_id - 1]);
+	}
+	if (axis_upload_id > (app->localFFTPlan->numAxisUploads[0] / 2)) {
+		axis->specializationConstants.size[0].data.i = app->localFFTPlan->axes[0][app->localFFTPlan->numAxisUploads[0] - axis_upload_id - 1].specializationConstants.size[0].data.i;
+	}
 	axis->specializationConstants.size[1].type = 31;
 	axis->specializationConstants.size[1].data.i = app->configuration.size[1];
 	axis->specializationConstants.size[2].type = 31;
 	axis->specializationConstants.size[2].data.i = app->configuration.size[2];
+	axis->specializationConstants.numAxisUploads = app->localFFTPlan->numAxisUploads[0];
 
 	axis->specializationConstants.jw_control_bitmask = app->configuration.jw_control_bitmask;
-	axis->specializationConstants.performMatVecMul = ((app->configuration.jw_type%10)!=2) ? 1 : 0;
+	axis->specializationConstants.performMatVecMul = (((app->configuration.jw_type % 10) != 2) && ((axis_upload_id == 0) || (axis_upload_id == (app->localFFTPlan->numAxisUploads[0] - 1)))) ? 1 : 0;
 	axis->specializationConstants.performTriSolve = ((app->configuration.jw_type%10)!=1) ? 1 : 0;
 	if((app->configuration.jw_type % 10) == 3) axis->specializationConstants.performTriSolve = 2;
 
 	axis->specializationConstants.useParallelThomas = 1;
-	if ((app->configuration.jw_type > 1000) || ((app->configuration.M_size <= app->configuration.warpSize) && (app->configuration.numConsecutiveJWIterations == 1))) axis->specializationConstants.useParallelThomas = 0;
+	if ((app->configuration.jw_type > 1000) || ((axis->specializationConstants.M_size.data.i <= app->configuration.warpSize) && (app->configuration.numConsecutiveJWIterations == 1))) axis->specializationConstants.useParallelThomas = 0;
 	
 	axis->specializationConstants.sharedMatricesUpload = 0;
 	axis->specializationConstants.num_warps_data_parallel = 1;//(axis->specializationConstants.useParallelThomas && (axis->specializationConstants.size[1].data.i > 100)) ? 8 : 1;
 	
-	axis->specializationConstants.logicalWarpSize = ((uint64_t)ceil(app->configuration.M_size / (double)(1024))) * 64;
-	if (app->configuration.M_size < 512) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize;
+	axis->specializationConstants.logicalWarpSize = ((uint64_t)ceil(axis->specializationConstants.M_size.data.i / (double)(1024))) * 64;
+	if (axis->specializationConstants.M_size.data.i < 512) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize;
 	if (axis->specializationConstants.logicalWarpSize < app->configuration.warpSize) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize;
 	if (axis->specializationConstants.logicalWarpSize % app->configuration.warpSize) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize * ((axis->specializationConstants.logicalWarpSize + app->configuration.warpSize - 1)/app->configuration.warpSize);
 	
@@ -130,25 +212,20 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		axis->specializationConstants.outputNumberByteSize = 4;
 	}
 
-	res = initParametersAPI_JW(app, &axis->specializationConstants);
-	if (res != PFSOLVE_SUCCESS) {
-		deletePfSolve(app);
-		return res;
-	}
 
 	axis->specializationConstants.registers_per_thread = 1;
-	int numWarps = (uint64_t)ceil((app->configuration.M_size_pow2 / (double)app->configuration.warpSize) / 4.0);
+	int numWarps = (uint64_t)ceil((axis->specializationConstants.M_size.data.i / (double)app->configuration.warpSize) / 4.0);
 	if (axis->specializationConstants.useParallelThomas) numWarps = axis->specializationConstants.logicalWarpSize / app->configuration.warpSize;// (uint64_t)ceil((app->configuration.M_size_pow2 / (double)app->configuration.warpSize) / 8.0);
 	if ((numWarps * app->configuration.warpSize) > app->configuration.maxThreadsNum) numWarps = app->configuration.maxThreadsNum / app->configuration.warpSize;
 	
 	if (axis->specializationConstants.useParallelThomas) {
-		int64_t tempM = app->configuration.M_size;
+		int64_t tempM = axis->specializationConstants.M_size.data.i;
 		if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
 		axis->specializationConstants.registers_per_thread = (uint64_t)ceil(tempM / (double)(app->configuration.warpSize*numWarps));
 		if ((app->configuration.vendorID == 0x1002) && (axis->specializationConstants.registers_per_thread % 2 == 0)) axis->specializationConstants.registers_per_thread++;
 	}
 	else {
-		axis->axisBlock[0] = app->configuration.M_size_pow2 / numWarps;
+		axis->axisBlock[0] = axis->specializationConstants.M_size.data.i / numWarps;
 		while (axis->axisBlock[0] > app->configuration.warpSize) {
 			axis->axisBlock[0] = (uint64_t)ceil(axis->axisBlock[0] / 2.0);
 			axis->specializationConstants.registers_per_thread *= 2;
@@ -159,8 +236,21 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->axisBlock[2] = 1;
 	axis->specializationConstants.num_threads = (axis->axisBlock[0] / axis->specializationConstants.num_warps_data_parallel) * axis->axisBlock[1] * axis->axisBlock[2];
 
+	axis->specializationConstants.localSize[0].type = 31;
+	axis->specializationConstants.localSize[0].data.i = axis->axisBlock[0];
+	axis->specializationConstants.localSize[1].type = 31;
+	axis->specializationConstants.localSize[1].data.i = axis->axisBlock[1];
+	axis->specializationConstants.localSize[2].type = 31;
+	axis->specializationConstants.localSize[2].data.i = axis->axisBlock[2];
+
+	res = initParametersAPI_JW(app, &axis->specializationConstants);
+	if (res != PFSOLVE_SUCCESS) {
+		deletePfSolve(app);
+		return res;
+	}
+
 	axis->specializationConstants.usedSharedMemory.type = 31;
-	if ((axis->specializationConstants.useParallelThomas)){
+	if ((axis->specializationConstants.useParallelThomas) || (axis->specializationConstants.numAxisUploads > 1)){
 		int64_t shared_stride = 2*(axis->specializationConstants.registers_per_thread / 2) + 1;
 		int64_t temp_scale = 1;
 		if (axis->specializationConstants.num_warps_data_parallel > 1) temp_scale = ((axis->specializationConstants.num_warps_data_parallel > 3) || (!axis->specializationConstants.sharedMatricesUpload)) ? axis->specializationConstants.num_warps_data_parallel : 3;
@@ -316,10 +406,25 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 
 	axis->specializationConstants.inputOffset.type = 31;
 	axis->specializationConstants.inputOffset.data.i = 0;
-
+	if ((axis_upload_id > 1) && (axis_upload_id <= (app->localFFTPlan->numAxisUploads[0] / 2))) {
+		axis->specializationConstants.inputOffset.data.i =  app->localFFTPlan->axes[0][axis_upload_id - 1].specializationConstants.outputOffset.data.i;// app->localFFTPlan->axes[0][axis_upload_id - 1].specializationConstants.inputOffset.data.i + 3 * app->localFFTPlan->axes[0][axis_upload_id - 1].specializationConstants.size[0].data.i * app->localFFTPlan->axes[0][axis_upload_id - 1].specializationConstants.size[1].data.i;
+	}
+	if (axis_upload_id > (app->localFFTPlan->numAxisUploads[0] / 2)) {
+		axis->specializationConstants.inputOffset.data.i = app->localFFTPlan->axes[0][app->localFFTPlan->numAxisUploads[0] - axis_upload_id - 1].specializationConstants.inputOffset.data.i;
+	}
 	axis->specializationConstants.outputOffset.type = 31;
 	axis->specializationConstants.outputOffset.data.i = 0;
-
+	if ((axis_upload_id >= 1) && (axis_upload_id < (app->localFFTPlan->numAxisUploads[0] / 2))) {
+		axis->specializationConstants.outputOffset.data.i = app->localFFTPlan->axes[0][axis_upload_id].specializationConstants.inputOffset.data.i + 3 * app->localFFTPlan->axes[0][axis_upload_id].specializationConstants.size[0].data.i * app->localFFTPlan->axes[0][axis_upload_id].specializationConstants.size[1].data.i;
+	}
+	if (axis_upload_id >= (app->localFFTPlan->numAxisUploads[0] / 2)) {
+		axis->specializationConstants.outputOffset.data.i = app->localFFTPlan->axes[0][axis_upload_id].specializationConstants.inputOffset.data.i;
+	}
+	axis->specializationConstants.kernelOffset.type = 31;
+	axis->specializationConstants.kernelOffset.data.i = 0;
+	if (axis_upload_id > (app->localFFTPlan->numAxisUploads[0] / 2)) {
+		axis->specializationConstants.kernelOffset.data.i = app->localFFTPlan->axes[0][axis_upload_id-1].specializationConstants.outputOffset.data.i;
+	}
 	res = PfSolveConfigureDescriptors(app, plan, axis, 0, 0, 0);
 	if (res != PFSOLVE_SUCCESS) {
 		deletePfSolve(app);
@@ -330,6 +435,9 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 		deletePfSolve(app);
 		return res;
 	}
+
+	if ((axis_upload_id > 0) && (axis_upload_id < (app->localFFTPlan->numAxisUploads[0]-1))) axis->specializationConstants.performOffsetUpdate = 0;
+	
 	res = PfSolveUpdateBufferSet(app, plan, axis, 0,0,0);
 	if (res != PFSOLVE_SUCCESS) {
 		deletePfSolve(app);
@@ -365,14 +473,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	if (tempSize[2] > app->configuration.maxComputeWorkGroupCount[2]) axis->specializationConstants.performWorkGroupShift[2] = 1;
 	else  axis->specializationConstants.performWorkGroupShift[2] = 0;
 
-	axis->specializationConstants.localSize[0].type = 31;
-	axis->specializationConstants.localSize[0].data.i = axis->axisBlock[0];
-	axis->specializationConstants.localSize[1].type = 31;
-	axis->specializationConstants.localSize[1].data.i = axis->axisBlock[1];
-	axis->specializationConstants.localSize[2].type = 31;
-	axis->specializationConstants.localSize[2].data.i = axis->axisBlock[2];
-    axis->specializationConstants.numAxisUploads = 1;
-    app->localFFTPlan->numAxisUploads[0] = 1;
+    //app->localFFTPlan->numAxisUploads[0] = 1;
 	//res = PfSolve_getPushConstantsSize(&axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {
 		deletePfSolve(app);

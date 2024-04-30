@@ -390,6 +390,7 @@ static inline PfSolveResult initParametersAPI(PfSolveApplication* app, PfSolveSp
 #if(VKFFT_BACKEND==0)
 	sprintf(sc->inputsStruct.name, "inputs");
 	sprintf(sc->outputsStruct.name, "outputs");
+	
 	sprintf(sc->gl_LocalInvocationID_x.name, "gl_LocalInvocationID.x");
 	sprintf(sc->gl_LocalInvocationID_y.name, "gl_LocalInvocationID.y");
 	sprintf(sc->gl_LocalInvocationID_z.name, "gl_LocalInvocationID.z");
@@ -428,6 +429,7 @@ static inline PfSolveResult initParametersAPI(PfSolveApplication* app, PfSolveSp
 #elif((VKFFT_BACKEND==1) ||(VKFFT_BACKEND==2))
 	sprintf(sc->inputsStruct.name, "inputs");
 	sprintf(sc->outputsStruct.name, "outputs");
+	
 	sprintf(sc->gl_LocalInvocationID_x.name, "threadIdx.x");
 	sprintf(sc->gl_LocalInvocationID_y.name, "threadIdx.y");
 	sprintf(sc->gl_LocalInvocationID_z.name, "threadIdx.z");
@@ -467,6 +469,7 @@ static inline PfSolveResult initParametersAPI(PfSolveApplication* app, PfSolveSp
 #elif((VKFFT_BACKEND==3)||(VKFFT_BACKEND==4))
 	sprintf(sc->inputsStruct.name, "inputs");
 	sprintf(sc->outputsStruct.name, "outputs");
+	
 	sprintf(sc->gl_LocalInvocationID_x.name, "get_local_id(0)");
 	sprintf(sc->gl_LocalInvocationID_y.name, "get_local_id(1)");
 	sprintf(sc->gl_LocalInvocationID_z.name, "get_local_id(2)");
@@ -506,6 +509,7 @@ static inline PfSolveResult initParametersAPI(PfSolveApplication* app, PfSolveSp
 #elif(VKFFT_BACKEND==5)
 	sprintf(sc->inputsStruct.name, "inputs");
 	sprintf(sc->outputsStruct.name, "outputs");
+	
 	sprintf(sc->gl_LocalInvocationID_x.name, "thread_position_in_threadgroup.x");
 	sprintf(sc->gl_LocalInvocationID_y.name, "thread_position_in_threadgroup.y");
 	sprintf(sc->gl_LocalInvocationID_z.name, "thread_position_in_threadgroup.z");
@@ -558,11 +562,17 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 		sc->inputsStruct.type = 200 + sc->floatTypeInputMemoryCode;
 	PfAllocateContainerFlexible(sc, &sc->inputsStruct, 50);
 
-	if ((sc->block%10 == 5) || (sc->block%10 == 6) || (sc->block%10 == 7))
+	if ((sc->block % 10 == 5) || (sc->block % 10 == 6) || (sc->block % 10 == 7)) {
 		sc->outputsStruct.type = 200 + sc->vecTypeOutputMemoryCode;
-    else
+		sc->kernelStruct.type = 200 + sc->vecTypeOutputMemoryCode;
+	}
+	else {
 		sc->outputsStruct.type = 200 + sc->floatTypeOutputMemoryCode;
+		sc->kernelStruct.type = 200 + sc->floatTypeOutputMemoryCode;
+	}
 	PfAllocateContainerFlexible(sc, &sc->outputsStruct, 50);
+
+	PfAllocateContainerFlexible(sc, &sc->kernelStruct, 50);
 
 	sc->sdataStruct.type = 200 + sc->floatTypeCode; // need to fix
 	PfAllocateContainerFlexible(sc, &sc->sdataStruct, 50);
@@ -816,6 +826,7 @@ static inline PfSolveResult initParametersAPI_JW(PfSolveApplication* app, PfSolv
 	//sprintf(sc->sinDef.name, "native_sin");
 	sprintf(sc->constDef.name, "constant");
 #endif
+	sprintf(sc->kernelStruct.name, "kernel_name");
 	return sc->res;
 }
 
@@ -1126,6 +1137,7 @@ static inline PfSolveResult freeParametersAPI_JW(PfSolveApplication* app, PfSolv
 	sc->tempStr = 0;
 	PfDeallocateContainer(sc, &sc->inputsStruct);
 	PfDeallocateContainer(sc, &sc->outputsStruct);
+	PfDeallocateContainer(sc, &sc->kernelStruct);
 	PfDeallocateContainer(sc, &sc->sdataStruct);
 	
 	PfDeallocateContainer(sc, &sc->gl_LocalInvocationID_x);

@@ -82,7 +82,9 @@ static inline PfSolveResult PfSolve_Plan_block(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.M_size.type = 31;
 	axis->specializationConstants.M_size.data.i = app->configuration.M_size;
 	axis->specializationConstants.M_size_pow2.type = 31;
-	axis->specializationConstants.M_size_pow2.data.i = app->configuration.M_size_pow2;
+	int64_t tempM = app->configuration.M_size;
+	if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
+	axis->specializationConstants.M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)tempM)));
 
 	axis->specializationConstants.block = app->configuration.block;
 	axis->specializationConstants.lshift = app->configuration.lshift;
@@ -94,8 +96,7 @@ static inline PfSolveResult PfSolve_Plan_block(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.size[2].data.i = 1;
 	//axis->specializationConstants.complexDataType = app->configuration.complexDataType;//((axis->specializationConstants.copy_real!=0)&&(axis->specializationConstants.copy_real!=100)) ? 1 : 0;
 	axis->specializationConstants.jw_control_bitmask = app->configuration.jw_control_bitmask;
-	axis->specializationConstants.num_warps_data_parallel = 1;
-	
+
 	res = initMemoryParametersAPI(app, &axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {
 		deletePfSolve(app);

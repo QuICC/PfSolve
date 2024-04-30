@@ -298,6 +298,12 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 	PfDefine(sc, &sc->tempInt, name);
 	PfSetToZero(sc, &sc->tempInt);
 
+	sc->numActiveThreads.type = 100 + sc->uintTypeCode;
+	PfAllocateContainerFlexible(sc, &sc->numActiveThreads, 50);
+	sprintf(name, "numActiveThreads");
+	PfDefine(sc, &sc->numActiveThreads, name);
+	PfSetToZero(sc, &sc->numActiveThreads);
+
 	sc->warpInvocationID.type = 100 + sc->uintTypeCode;
 	PfAllocateContainerFlexible(sc, &sc->warpInvocationID, 50);
 	sprintf(name, "warpInvocationID");
@@ -678,7 +684,7 @@ static inline void freeRegistersInitialization_compute_JW(PfSolveSpecializationC
 
 	PfDeallocateContainer(sc, &sc->tempInt);
 
-	PfDeallocateContainer(sc, &sc->tempInt2);
+	PfDeallocateContainer(sc, &sc->numActiveThreads);
 
 	PfDeallocateContainer(sc, &sc->inoutID);
 	PfDeallocateContainer(sc, &sc->inoutID_x);

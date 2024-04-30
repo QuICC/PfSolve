@@ -28,16 +28,33 @@ static inline void appendSharedToRegisters(PfSolveSpecializationConstantsLayout*
 {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	if (sc->storeSharedComplexComponentsSeparately){
-		sc->tempLen = sprintf(sc->tempStr, "\
+		if (sdataID->type > 100) {
+			sc->tempLen = sprintf(sc->tempStr, "\
 %s = sdata[%s];\n", out->data.c[0].name, sdataID->name);
-		PfAppendLine(sc);
-		sc->tempLen = sprintf(sc->tempStr, "\
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, "\
 %s = sdata[%s + %" PRIi64 "];\n", out->data.c[1].name, sdataID->name, sc->offsetImaginaryShared.data.i);
-		PfAppendLine(sc);
+			PfAppendLine(sc);
+		}
+		else {
+			sc->tempLen = sprintf(sc->tempStr, "\
+%s = sdata[%" PRIi64 "];\n", out->data.c[0].name, sdataID->data.i);
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, "\
+%s = sdata[%" PRIi64 "];\n", out->data.c[1].name, sdataID->data.i + sc->offsetImaginaryShared.data.i);
+			PfAppendLine(sc);
+		}
 	}else{
-		sc->tempLen = sprintf(sc->tempStr, "\
+		if (sdataID->type > 100) {
+			sc->tempLen = sprintf(sc->tempStr, "\
 %s = sdata[%s];\n", out->name, sdataID->name);
-		PfAppendLine(sc);
+			PfAppendLine(sc);
+		}
+		else {
+			sc->tempLen = sprintf(sc->tempStr, "\
+%s = sdata[%" PRIi64 "];\n", out->name, sdataID->data.i);
+			PfAppendLine(sc);
+		}
 	}
 	return;
 }
@@ -102,16 +119,33 @@ static inline void appendRegistersToShared(PfSolveSpecializationConstantsLayout*
 {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	if (sc->storeSharedComplexComponentsSeparately){
-		sc->tempLen = sprintf(sc->tempStr, "\
+		if (sdataID->type > 100) {
+			sc->tempLen = sprintf(sc->tempStr, "\
 sdata[%s] = %s;\n", sdataID->name, out->data.c[0].name);
-		PfAppendLine(sc);
-		sc->tempLen = sprintf(sc->tempStr, "\
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, "\
 sdata[%s + %" PRIi64 "] = %s;\n", sdataID->name, sc->offsetImaginaryShared.data.i, out->data.c[1].name);
-		PfAppendLine(sc);
+			PfAppendLine(sc);
+		}
+		else {
+			sc->tempLen = sprintf(sc->tempStr, "\
+sdata[%" PRIi64 "] = %s;\n", sdataID->data.i, out->data.c[0].name);
+			PfAppendLine(sc);
+			sc->tempLen = sprintf(sc->tempStr, "\
+sdata[%" PRIi64 "] = %s;\n", sdataID->data.i + sc->offsetImaginaryShared.data.i, out->data.c[1].name);
+			PfAppendLine(sc);
+		}
 	}else{
-		sc->tempLen = sprintf(sc->tempStr, "\
+		if (sdataID->type > 100) {
+			sc->tempLen = sprintf(sc->tempStr, "\
 sdata[%s] = %s;\n", sdataID->name, out->name);
-		PfAppendLine(sc);
+			PfAppendLine(sc);
+		}
+		else {
+			sc->tempLen = sprintf(sc->tempStr, "\
+sdata[%" PRIi64 "] = %s;\n", sdataID->data.i, out->name);
+			PfAppendLine(sc);
+		}
 	}
 	return;
 }

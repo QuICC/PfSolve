@@ -791,10 +791,10 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 
 	int64_t maxSharedMemPCRIteration =  (int64_t)ceil(log2(sc->num_threads / sc->warpSize));
 	int64_t maxPCRiteration = (sc->warpSize > sc->M_size_pow2.data.i) ? (int64_t)ceil(log2(sc->M_size_pow2.data.i)) :  (int64_t)ceil(log2(sc->warpSize));
+	
 	int64_t maxBSiteration = sc->M_size_pow2.data.i / sc->num_threads;
 	int64_t stride = 1;
 	int64_t next_stride = 1;
-   
 	for (int64_t sharedMemPCRIteration = 0; sharedMemPCRIteration < maxSharedMemPCRIteration; sharedMemPCRIteration++) {
 		next_stride = stride * 2;
 		if (!sc->ld_zero) {
@@ -805,7 +805,7 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 			if (!sc->ud_zero) {
 				PfSubgroupShuffleUp(sc, &sc->temp2, &sc->ud[0], stride);
 			}
-			temp_int.data.i = stride;
+			/*temp_int.data.i = stride;
 			PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 			PfSetToZero(sc, &sc->ld_copy[0]);
 			PfSetToZero(sc, &sc->temp);
@@ -821,8 +821,9 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 					PfIf_end(sc);
 				}
 			}
-			PfIf_end(sc);
-					
+			PfIf_end(sc);*/
+			temp_int.data.i = stride;
+			PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 			PfMul(sc, &sc->ld_copy[0], &sc->ld_copy[0], &sc->temp, 0);
 			PfMovNeg(sc, &sc->ld_copy[0], &sc->ld_copy[0]);
 			PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
@@ -833,6 +834,14 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 				PfSub(sc, &sc->md[0], &temp_double, &sc->temp);
 			}
 			PfSub(sc, &sc->rd_copy[0], &sc->rd[0], &sc->temp1);
+			PfIf_else(sc);
+				PfMov(sc, &sc->ld_copy[0], &sc->ld[0]);
+				if (!sc->ud_zero) {
+					temp_double.data.d = pfFPinit("1.0");
+					PfMov(sc, &sc->md[0], &temp_double);
+				}
+				PfMov(sc, &sc->rd_copy[0], &sc->rd[0]);
+			PfIf_end(sc);
 		}
 
 		if (!sc->ud_zero) {
@@ -846,7 +855,7 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 				PfSubgroupShuffleDown(sc, &sc->temp2, &sc->ld[0], stride);
 			}
 
-			temp_int.data.i = sc->M_size.data.i - stride;
+			/*temp_int.data.i = sc->M_size.data.i - stride;
 			PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 			PfSetToZero(sc, &sc->ud_copy[0]);
 			PfSetToZero(sc, &sc->temp);
@@ -862,8 +871,9 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 					PfSetToZero(sc, &sc->ud_copy[0]);
 				}
 			}
-			PfIf_end(sc);			
-					
+			PfIf_end(sc);	*/		
+			temp_int.data.i = sc->M_size.data.i - stride;
+			PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);		
 			PfMul(sc, &sc->ud_copy[0], &sc->ud_copy[0], &sc->temp, 0);
 			PfMovNeg(sc, &sc->ud_copy[0], &sc->ud_copy[0]);
 			PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
@@ -875,7 +885,9 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 			}
 			else
 				PfSub(sc, &sc->rd_copy[0], &sc->rd[0], &sc->temp1);
-
+			PfIf_else(sc);
+				PfMov(sc, &sc->ud_copy[0], &sc->ud[0]);
+			PfIf_end(sc);
 		}
 
 		if ((!sc->ld_zero) && (!sc->ud_zero)) {
@@ -980,6 +992,7 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 	next_stride = 1;
 	int temp_logicalWarpSize = sc->logicalWarpSize;
 	sc->logicalWarpSize = sc->warpSize;
+	 
 	for (int64_t PCRiteration = 0; PCRiteration < maxPCRiteration; PCRiteration++) {
 		next_stride = stride * 2;
 		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
@@ -996,15 +1009,16 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 				if (i - stride / sc->warpSize >= 0)
 				{
 					PfMov(sc, &sc->temp, &sc->ld[i]);
-				
+
 					if ((stride < sc->warpSize)) {
 						if ((sc->registers_per_thread > 1) && (i > 0)) {
 							temp_int.data.i = sc->warpSize - stride;
-							if(temp_int.data.i<=0){
+							if (temp_int.data.i <= 0) {
 								PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
 								PfMov(sc, &sc->rd_copy[i], &sc->rd[i - 1]);
-							}else{
-								if (temp_int.data.i < 0) 
+							}
+							else {
+								if (temp_int.data.i < 0)
 									temp_int.data.i = 0;
 								PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
 								PfMov(sc, &sc->ld_copy[i], &sc->ld[i - 1]);
@@ -1029,85 +1043,93 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 						if ((sc->registers_per_thread > 1) && (i >= stride / sc->warpSize)) {
 							PfMov(sc, &sc->ld_copy[i], &sc->ld[i - stride / sc->warpSize]);
 							PfMov(sc, &sc->temp1, &sc->rd[i - stride / sc->warpSize]);
-							
+
 						}
 					}
-					//sc->tempLen = sprintf(sc->tempStr, "\n\
-			if (id_x < %" PRIi64 ") {\n\
-				ld_copy_%" PRIi64 " = 0;\n\
-				temp_k = 0;\n\
-				//temp_ac = 0;\n\
-				//temp_d = 0;\n\
-			}\n", stride - i * sc->num_threads, i);
-				
+					if (!sc->ud_zero) {
+						PfSubgroupShuffleUp(sc, &sc->temp2, &sc->ud[i], stride);
+						//sc->tempLen = sprintf(sc->tempStr, "\n\
+				if (id_x < %" PRIi64 ") {\n\
+					ld_copy_%" PRIi64 " = 0;\n\
+					temp_k = 0;\n\
+					//temp_ac = 0;\n\
+					//temp_d = 0;\n\
+				}\n", stride - i * sc->num_threads, i);
+					}
 
-					temp_int.data.i = stride - i * sc->warpSize;
-					if (temp_int.data.i > 0) {
-						if (temp_int.data.i >= sc->warpSize){
-							PfSetToZero(sc, &sc->ld_copy[i]);
-							PfSetToZero(sc, &sc->temp);
-						}
-						else {
-							PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
-							PfSetToZero(sc, &sc->ld_copy[i]);
-							PfSetToZero(sc, &sc->temp);
-							PfIf_else(sc);
-							temp_int.data.i = next_stride - i * sc->warpSize;
+						/*temp_int.data.i = stride - i * sc->warpSize;
+						if (temp_int.data.i > 0) {
 							if (temp_int.data.i >= sc->warpSize){
 								PfSetToZero(sc, &sc->ld_copy[i]);
-							}else{
-								if (temp_int.data.i > 0) {
-									PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
-									PfSetToZero(sc, &sc->ld_copy[i]);
-									if (!sc->ud_zero) {
-										//sc->tempLen = sprintf(sc->tempStr, "\n\
-								temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
-
-									}
-									PfIf_end(sc);
-								}
+								PfSetToZero(sc, &sc->temp);
 							}
-							PfIf_end(sc);
-						}
-					}
-					else {
-						temp_int.data.i = next_stride - i * sc->warpSize;
-						if (temp_int.data.i > 0) {
-							if (temp_int.data.i >= sc->warpSize) {
+							else {
+								PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 								PfSetToZero(sc, &sc->ld_copy[i]);
-							}
-							else{
-								if (temp_int.data.i > 0) {
-									PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+								PfSetToZero(sc, &sc->temp);
+								PfIf_else(sc);
+								temp_int.data.i = next_stride - i * sc->warpSize;
+								if (temp_int.data.i >= sc->warpSize){
 									PfSetToZero(sc, &sc->ld_copy[i]);
-									if (!sc->ud_zero) {
-										//sc->tempLen = sprintf(sc->tempStr, "\n\
-								temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
+								}else{
+									if (temp_int.data.i > 0) {
+										PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+										PfSetToZero(sc, &sc->ld_copy[i]);
+										if (!sc->ud_zero) {
+											//sc->tempLen = sprintf(sc->tempStr, "\n\
+									temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
 
+										}
+										PfIf_end(sc);
 									}
-									PfIf_end(sc);
 								}
+								PfIf_end(sc);
 							}
 						}
-					}
-					
+						else {
+							temp_int.data.i = next_stride - i * sc->warpSize;
+							if (temp_int.data.i > 0) {
+								if (temp_int.data.i >= sc->warpSize) {
+									PfSetToZero(sc, &sc->ld_copy[i]);
+								}
+								else{
+									if (temp_int.data.i > 0) {
+										PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
+										PfSetToZero(sc, &sc->ld_copy[i]);
+										if (!sc->ud_zero) {
+											//sc->tempLen = sprintf(sc->tempStr, "\n\
+									temp_ac = sdata[id_x + %" PRIi64 "] * temp_k;\n", sc->offset_ud - stride + i * sc->num_threads);
+
+										}
+										PfIf_end(sc);
+									}
+								}
+							}
+						}*/
+					temp_int.data.i = stride;
+					PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+
 					PfMul(sc, &sc->ld_copy[i], &sc->ld_copy[i], &sc->temp, 0);
 					PfMovNeg(sc, &sc->ld_copy[i], &sc->ld_copy[i]);
 					PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
-					
-					if (!sc->ud_zero) {
-						PfSubgroupShuffleUp(sc, &sc->temp, &sc->ud[i], stride);
 
-						PfMul(sc, &sc->temp, &sc->temp, &sc->ld[i], 0);
+					if (!sc->ud_zero) {
+						PfMul(sc, &sc->temp, &sc->temp2, &sc->ld[i], 0);
 						temp_double.data.d = pfFPinit("1.0");
 						PfSub(sc, &sc->md[i], &temp_double, &sc->temp);
-						
+
 					}
 					PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
-
+					PfIf_else(sc);
+					PfMov(sc, &sc->ld_copy[0], &sc->ld[0]);
+					if (!sc->ud_zero) {
+						temp_double.data.d = pfFPinit("1.0");
+						PfMov(sc, &sc->md[0], &temp_double);
+					}
+					PfMov(sc, &sc->rd_copy[0], &sc->rd[0]);
+					PfIf_end(sc);
 				}
 			}
-
 			if (!sc->ud_zero) {
 				if (i + stride / sc->warpSize < sc->registers_per_thread)
 				{
@@ -1141,49 +1163,49 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 							PfMov(sc, &sc->temp1, &sc->rd[i + stride / sc->warpSize]);
 						}
 					}
+					if (!sc->ld_zero) {
+						PfSubgroupShuffleDown(sc, &sc->temp2, &sc->ld[i], stride);
+					}
+						//sc->tempLen = sprintf(sc->tempStr, "\n\
+				if (id_x >= %" PRIi64 ") {\n\
+					ud_copy_%" PRIi64 " = 0;\n\
+					temp_k = 0;\n\
+					//temp_ac = 0;\n\
+					//temp_d = 0;\n\
+				}\n", sc->M_size.x_num - stride - i * sc->num_threads, i);
 
-
-					//sc->tempLen = sprintf(sc->tempStr, "\n\
-			if (id_x >= %" PRIi64 ") {\n\
-				ud_copy_%" PRIi64 " = 0;\n\
-				temp_k = 0;\n\
-				//temp_ac = 0;\n\
-				//temp_d = 0;\n\
-			}\n", sc->M_size.x_num - stride - i * sc->num_threads, i);
-					
-					temp_int.data.i = sc->warpSize - stride - i * sc->warpSize;
-					if (sc->warpSize > temp_int.data.i) {
-						if (temp_int.data.i > 0) {
-							PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
-							PfSetToZero(sc, &sc->ud_copy[i]);
-							PfSetToZero(sc, &sc->temp);
-							temp_int.data.i = sc->warpSize - next_stride - i * sc->warpSize;
-							if (sc->warpSize > temp_int.data.i) {
-								PfIf_else(sc);
-								if (temp_int.data.i > 0) {
-									PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
-									PfSetToZero(sc, &sc->ud_copy[i]);
-									PfIf_end(sc);
-								}else{
-									PfSetToZero(sc, &sc->ud_copy[i]);
+						/*temp_int.data.i = sc->warpSize - stride - i * sc->warpSize;
+						if (sc->warpSize > temp_int.data.i) {
+							if (temp_int.data.i > 0) {
+								PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+								PfSetToZero(sc, &sc->ud_copy[i]);
+								PfSetToZero(sc, &sc->temp);
+								temp_int.data.i = sc->warpSize - next_stride - i * sc->warpSize;
+								if (sc->warpSize > temp_int.data.i) {
+									PfIf_else(sc);
+									if (temp_int.data.i > 0) {
+										PfIf_ge_start(sc, &sc->warpInvocationID, &temp_int);
+										PfSetToZero(sc, &sc->ud_copy[i]);
+										PfIf_end(sc);
+									}else{
+										PfSetToZero(sc, &sc->ud_copy[i]);
+									}
 								}
+								PfIf_end(sc);
 							}
-							PfIf_end(sc);
-						}
-						else {
-							PfSetToZero(sc, &sc->ud_copy[i]);
-							PfSetToZero(sc, &sc->temp);
-						}
-					}					
-					
+							else {
+								PfSetToZero(sc, &sc->ud_copy[i]);
+								PfSetToZero(sc, &sc->temp);
+							}
+						}		*/
+					temp_int.data.i = sc->warpSize - stride;
+					PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
 					PfMul(sc, &sc->ud_copy[i], &sc->ud_copy[i], &sc->temp, 0);
 					PfMovNeg(sc, &sc->ud_copy[i], &sc->ud_copy[i]);
 					PfMul(sc, &sc->temp1, &sc->temp1, &sc->temp, 0);
 
 					if (!sc->ld_zero) {
-						PfSubgroupShuffleDown(sc, &sc->temp, &sc->ld[i], stride);
-
-						PfMul(sc, &sc->temp, &sc->temp, &sc->ud[i], 0);
+						PfMul(sc, &sc->temp, &sc->temp2, &sc->ud[i], 0);
 						PfSub(sc, &sc->md[i], &sc->md[i], &sc->temp);
 						//sc->tempLen = sprintf(sc->tempStr, "\n\
 			md_%" PRIi64 " = md_%" PRIi64 " - temp_ac;\n", i, i);
@@ -1191,13 +1213,15 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 					}
 					else
 						PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
-
+					PfIf_else(sc);
+					PfMov(sc, &sc->ud_copy[0], &sc->ud[0]);
+					//PfMov(sc, &sc->rd_copy[0], &sc->rd[0]);
+					PfIf_end(sc);
+					//sc->tempLen = sprintf(sc->tempStr, "	}\n");
+					//PfAppendLine(sc);
+					//
 				}
-				//sc->tempLen = sprintf(sc->tempStr, "	}\n");
-				//PfAppendLine(sc);
-				//
 			}
-
 			if ((!sc->ld_zero) && (!sc->ud_zero)) {
 				temp_double.data.d = pfFPinit("1.0");
 				PfDiv(sc, &sc->md[i], &temp_double, &sc->md[i]);
@@ -1214,6 +1238,8 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 				PfMov(sc, &sc->ud[i], &sc->ud_copy[i]);
 			}
 			PfMov(sc, &sc->rd[i], &sc->rd_copy[i]);
+			
+	
 		}
 		//appendBarrier(sc);
 		
@@ -1225,7 +1251,7 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 		//if (PCRiteration==maxPCRiteration-1)appendBarrier(sc);
 		
 	}
-
+	
 	for (int64_t BSiteration = 1; BSiteration < maxBSiteration; BSiteration++) {
 		if (!sc->ld_zero) {
 			PfMul(sc, &sc->temp, &sc->ld[BSiteration], &sc->rd[BSiteration-1], 0);
@@ -1262,6 +1288,59 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 
 		appendSharedToRegisters(sc, &sc->rd[0], &sc->tempInt);
 		appendBarrierPfSolve(sc);
+
+		if ((sc->numAxisUploads > 1) && ((sc->axis_upload_id == 0) || (sc->axis_upload_id == (sc->numAxisUploads - 1)))) {
+			if (!sc->ld_zero) {
+				temp_int.data.i = sc->num_threads / sc->warpSize;
+				PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+				PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
+				temp_int.data.i = sc->num_threads / sc->warpSize;
+				PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+				PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+				temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+				PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+				appendRegistersToShared(sc, &sc->tempInt, &sc->ld[0]);
+				appendBarrierPfSolve(sc);
+
+				PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
+				temp_int.data.i = sc->num_threads / sc->warpSize;
+				PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+				PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+				temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+				PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+				appendSharedToRegisters(sc, &sc->ld[0], &sc->tempInt);
+				appendBarrierPfSolve(sc);
+			}
+			if (!sc->ud_zero) {
+				temp_int.data.i = sc->num_threads / sc->warpSize;
+				PfMul(sc, &sc->tempInt, &sc->warpInvocationID, &temp_int, 0);
+				PfAdd(sc, &sc->inoutID, &sc->warpID, &sc->tempInt);
+				temp_int.data.i = sc->num_threads / sc->warpSize;
+				PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+				PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+				temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+				PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+				appendRegistersToShared(sc, &sc->tempInt, &sc->ud[0]);
+				appendBarrierPfSolve(sc);
+
+				PfMov(sc, &sc->inoutID, &sc->gl_LocalInvocationID_x);
+				temp_int.data.i = sc->num_threads / sc->warpSize;
+				PfDiv(sc, &sc->tempInt, &sc->inoutID, &temp_int);
+				PfMod(sc, &sc->inoutID_x, &sc->inoutID, &temp_int);
+				temp_int.data.i = sc->num_threads / sc->warpSize + 1;
+				PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
+				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
+
+				appendSharedToRegisters(sc, &sc->ud[0], &sc->tempInt);
+				appendBarrierPfSolve(sc);
+			}
+		}
 	}
 
 	if ((sc->scaleC.data.d != 1.0) || (sc->scaleC.type > 100)) {
@@ -1274,7 +1353,7 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 
 return;
 }
-static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSolveSpecializationConstantsLayout* sc){
+static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSolveSpecializationConstantsLayout* sc, PfContainer* reg_to_shuffle){
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	PfContainer temp_int = {};
 	temp_int.type = 31;
@@ -1302,10 +1381,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
-				appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &reg_to_shuffle[i]);
 			}
 			else
-				appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->inoutID, &reg_to_shuffle[i]);
 		}
 		else{
 			temp_int.data.i = used_registers;
@@ -1319,10 +1398,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->inoutID_x, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-				appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &reg_to_shuffle[i]);
 			}
 			else	
-				appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &reg_to_shuffle[i]);
 		}
 		if((i+1) * sc->num_threads > sc->M_size.data.i){
 			PfIf_end(sc);
@@ -1338,7 +1417,7 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 			temp_int.data.i = 1;
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
-		PfSetToZero(sc, &sc->rd[i]);
+		PfSetToZero(sc, &reg_to_shuffle[i]);
 		if(sc->M_size.data.i != used_registers * sc->num_threads){
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
@@ -1347,10 +1426,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->tempInt);
 			}
 			else
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->inoutID);
 		}
 		else{
 			temp_int.data.i = used_registers;
@@ -1363,10 +1442,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->inoutID_x, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->tempInt);
 			}
 			else
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->tempInt);
 		}
 		if(sc->M_size.data.i != used_registers * sc->num_threads){
 			PfIf_end(sc);
@@ -1459,7 +1538,7 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(PfSol
 	appendBarrierPfSolve(sc);*/
 	return;
 }
-static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSolveSpecializationConstantsLayout* sc) {
+static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSolveSpecializationConstantsLayout* sc, PfContainer* reg_to_shuffle) {
 	if (sc->res != PFSOLVE_SUCCESS) return;
 	PfContainer temp_int = {};
 	temp_int.type = 31;
@@ -1490,10 +1569,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSo
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
-				appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &reg_to_shuffle[i]);
 			}
 			else
-				appendRegistersToShared(sc, &sc->inoutID, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->inoutID, &reg_to_shuffle[i]);
 		}
 		else{
 			temp_int.data.i = used_registers;
@@ -1507,10 +1586,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSo
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->inoutID_x, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-				appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &reg_to_shuffle[i]);
 			}
 			else
-				appendRegistersToShared(sc, &sc->tempInt, &sc->rd[i]);
+				appendRegistersToShared(sc, &sc->tempInt, &reg_to_shuffle[i]);
 		}
 		if(sc->M_size.data.i != used_registers * sc->num_threads){
 			PfIf_end(sc);
@@ -1537,10 +1616,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSo
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID);
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->tempInt);
 			}
 			else
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->inoutID);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->inoutID);
 		}
 		else{
 			temp_int.data.i = used_registers;
@@ -1553,10 +1632,10 @@ static inline void appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(PfSo
 				temp_int.data.i = shared_stride * sc->num_threads;
 				PfMul(sc, &sc->inoutID_x, &sc->warpID, &temp_int, 0);
 				PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_x);
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->tempInt);
 			}
 			else
-				appendSharedToRegisters(sc, &sc->rd[i], &sc->tempInt);
+				appendSharedToRegisters(sc, &reg_to_shuffle[i], &sc->tempInt);
 		}
 		if((i+1) * sc->num_threads > sc->M_size.data.i){
 			PfIf_end(sc);
@@ -1604,13 +1683,12 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 	uint64_t used_registers = sc->registers_per_thread;//(sc->M_size.data.i + sc->warpSize - 1) / sc->warpSize;
 	
 	int64_t shared_stride = sc->num_threads / sc->warpSize * used_registers + 1;
-
+	
 	if (sc->num_threads == sc->warpSize) {
 		shared_stride = 2*(used_registers/2) + 1;
 	}
 	//temp_int.data.i = activeThreads;
 	//PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
-
 	if ((!sc->ld_zero) && (!sc->ud_zero)) {
 		temp_double.data.d = pfFPinit("1.0");
 		PfMov(sc, &sc->md[0], &temp_double);
@@ -1690,6 +1768,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			}
 		}
 	}
+	
 	if ((!sc->ld_zero) && (!sc->ud_zero)) {
 
 		for (uint64_t i = 0; i < used_registers; i++) {
@@ -1699,6 +1778,7 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfMul(sc, &sc->ld[i], &sc->ld[i], &sc->temp2, 0);
 			PfMul(sc, &sc->rd[i], &sc->rd[i], &sc->temp2, 0);
 		}
+		
 		int64_t temp_registers_per_thread = sc->registers_per_thread;
 		int64_t temp_M_size = sc->M_size.data.i;
 		int64_t temp_M_size_pow2 = sc->M_size_pow2.data.i;
@@ -1711,10 +1791,10 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 		sc->M_size.data.i = (sc->logicalWarpSize > sc->M_size.data.i) ? sc->M_size.data.i : sc->logicalWarpSize;
 		sc->M_size_pow2.data.i = (sc->logicalWarpSize > sc->M_size_pow2.data.i) ? sc->M_size_pow2.data.i : sc->logicalWarpSize;
 		sc->num_threads = sc->logicalWarpSize;
-		//PfPrintReg(sc, &sc->warpInvocationID, &sc->rd[0]);
+		
 		//appendTridiagonalSolve_PCR(sc);
 		appendTridiagonalSolve_PCR_Thomas(sc);
-		//PfPrintReg(sc, &sc->warpInvocationID, &sc->rd[0]);
+		
 		sc->registers_per_thread = temp_registers_per_thread;
 		sc->M_size.data.i = temp_M_size;
 		sc->M_size_pow2.data.i = temp_M_size_pow2;
@@ -1756,8 +1836,68 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 			PfSwapContainers(sc, &sc->ld[0], &sc->ld[used_registers - 1]);
 		}
 	}
+	if ((sc->numAxisUploads > 1) && (sc->axis_upload_id < (sc->numAxisUploads/2))) {
+		
+		temp_int.data.i = (sc->M_size.data.i + sc->registers_per_thread - 1) / sc->registers_per_thread - 1;
+		PfIf_eq_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+		temp_int.data.i = (sc->M_size.data.i - 1) % sc->registers_per_thread;
+		PfMov(sc, &sc->temp, &sc->ld[temp_int.data.i]);
+		PfMul(sc, &sc->ld[0], &sc->ld[0], &sc->temp, 0);
+		PfMovNeg(sc, &sc->ld[0], &sc->ld[0]);
 
-	
+		PfMul(sc, &sc->ud[0], &sc->ud[0], &sc->temp, 0);
+		PfSub(sc, &sc->ud[0], &sc->ud[temp_int.data.i], &sc->ud[0]);
+		PfMul(sc, &sc->rd[0], &sc->rd[0], &sc->temp, 0);
+		PfSub(sc, &sc->rd[0], &sc->rd[temp_int.data.i], &sc->rd[0]);
+		
+		PfIf_end(sc);
+		return;
+	}
+	if ((sc->numAxisUploads > 1) && (sc->axis_upload_id > (sc->numAxisUploads/2))) {
+		PfMod(sc, &sc->tempInt, &sc->gl_WorkGroupID_x, &sc->size[1]);
+		PfDivCeil(sc, &temp_int, &sc->size[0], &sc->M_size);
+		temp_int.data.i = 2*temp_int.data.i * 3;
+		PfMul(sc, &sc->inoutID_z, &sc->tempInt, &temp_int, 0);
+		temp_int.data.i = temp_int.data.i / 3 * 2;
+		PfAdd(sc, &sc->inoutID_z, &sc->inoutID_z, &temp_int);
+
+		if ((sc->kernelOffset.data.i > 0)){
+			PfAdd(sc, &sc->inoutID_z, &sc->inoutID_z, &sc->kernelOffset);
+		}
+
+		PfDiv(sc, &sc->tempInt, &sc->gl_WorkGroupID_x, &sc->size[1]);
+		temp_int.data.i = 2;
+		PfMul(sc, &sc->inoutID_y, &sc->tempInt, &temp_int, 0);
+		PfAdd(sc, &sc->inoutID_z, &sc->inoutID_y, &sc->inoutID_z);
+		temp_int.data.i = 0;
+		PfIf_gt_start(sc, &sc->inoutID_y, &temp_int);
+		temp_int.data.i = 1;
+		PfSub(sc, &sc->tempInt, &sc->inoutID_z, &temp_int);
+		appendGlobalToRegisters(sc, &sc->temp, &sc->kernelStruct, &sc->tempInt);
+		PfIf_else(sc);
+		PfSetToZero(sc, &sc->temp);
+		PfIf_end(sc);
+		//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->temp);
+		
+		PfDivCeil(sc, &temp_int, &sc->size[0], &sc->M_size);
+		temp_int.data.i = 2*(temp_int.data.i - 1);
+		PfIf_lt_start(sc, &sc->inoutID_y, &temp_int);
+		temp_int.data.i = 2;
+		PfAdd(sc, &sc->tempInt, &sc->inoutID_z, &temp_int);
+		appendGlobalToRegisters(sc, &sc->temp1, &sc->kernelStruct, &sc->tempInt);
+		PfIf_else(sc);
+		PfSetToZero(sc, &sc->temp1);
+		PfIf_end(sc);
+		
+
+		//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->temp);
+		//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->temp1);
+		PfMul(sc, &sc->temp, &sc->temp, &sc->ld[0], 0);
+		PfSub(sc, &sc->rd[0], &sc->rd[0], &sc->temp);
+		PfMul(sc, &sc->temp2, &sc->temp1, &sc->ud[0], 0);
+		PfSub(sc, &sc->rd[0], &sc->rd[0], &sc->temp2);
+		//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->rd[0]);
+	}
 	if (used_registers > 1){
 		if (!sc->ld_zero) {
 			if (!sc->ud_zero) {
@@ -1780,14 +1920,24 @@ static inline void appendTridiagonalSolve_ParallelThomas(PfSolveSpecializationCo
 
 		if (!sc->ud_zero) {
 			PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[0], 1);
+
+			if ((sc->numAxisUploads > 1) && (sc->axis_upload_id > (sc->numAxisUploads / 2))) {
+				temp_int.data.i = (sc->M_size.data.i + used_registers - 1) / used_registers - 1;
+				PfIf_ge_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+				PfMov(sc, &sc->temp, &sc->temp1);
+				PfIf_end(sc);
+			}
+
 			temp_int.data.i = sc->num_threads - 1;
-			PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
+			//if (sc->numAxisUploads == 1)
+				//PfIf_lt_start(sc, &sc->gl_LocalInvocationID_x, &temp_int);
 
 			for (uint64_t i = 1; i < used_registers; i++) {
 				PfMul(sc, &sc->temp2, &sc->ud[used_registers - i], &sc->temp, 0);
 				PfSub(sc, &sc->rd[used_registers - i], &sc->rd[used_registers - i], &sc->temp2);
 			}
-			PfIf_end(sc);
+			//if (sc->numAxisUploads == 1)
+				//PfIf_end(sc);
 		}
 
 	}

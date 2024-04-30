@@ -238,29 +238,16 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 					args[0] = axis->inputBuffer;
 					args_id = 1;
 				}
-				args[args_id] = axis->outputBuffer;
-				args_id++;
-				if (axis->specializationConstants.convolutionStep) {
+				if ((axis->specializationConstants.numAxisUploads > 1) && (!((axis->specializationConstants.axis_upload_id == 0) || (axis->specializationConstants.axis_upload_id == (axis->specializationConstants.numAxisUploads - 1))))) {
 					args[args_id] = app->configuration.kernel;
 					args_id++;
 				}
-				if (axis->specializationConstants.LUT) {
-					args[args_id] = &axis->bufferLUT;
+				else {
+					args[args_id] = axis->outputBuffer;
 					args_id++;
 				}
-				if (axis->specializationConstants.raderUintLUT) {
-					args[args_id] = &axis->bufferRaderUintLUT;
-					args_id++;
-				}
-				if (axis->specializationConstants.useBluesteinFFT && axis->specializationConstants.BluesteinConvolutionStep) {
-					if (axis->specializationConstants.inverseBluestein)
-						args[args_id] = &app->bufferBluesteinIFFT[axis->specializationConstants.axis_id];
-					else
-						args[args_id] = &app->bufferBluesteinFFT[axis->specializationConstants.axis_id];
-					args_id++;
-				}
-				if (axis->specializationConstants.useBluesteinFFT && (axis->specializationConstants.BluesteinPreMultiplication || axis->specializationConstants.BluesteinPostMultiplication)) {
-					args[args_id] = &app->bufferBluestein[axis->specializationConstants.axis_id];
+				if ((axis->specializationConstants.numAxisUploads > 1) && (axis->specializationConstants.axis_upload_id != (axis->specializationConstants.numAxisUploads/2))) {
+					args[args_id] = app->configuration.kernel;
 					args_id++;
 				}
 				//args[args_id] = &axis->pushConstants;
@@ -318,31 +305,19 @@ static inline PfSolveResult PfSolve_DispatchPlan(PfSolveApplication* app, PfSolv
 					args[0] = axis->inputBuffer;
 					args_id = 1;
 				}
-				args[args_id] = axis->outputBuffer;
-				args_id++;
-				if (axis->specializationConstants.convolutionStep) {
+				if ((axis->specializationConstants.numAxisUploads > 1) && (!((axis->specializationConstants.axis_upload_id == 0) || (axis->specializationConstants.axis_upload_id == (axis->specializationConstants.numAxisUploads - 1))))) {
 					args[args_id] = app->configuration.kernel;
 					args_id++;
 				}
-				if (axis->specializationConstants.LUT) {
-					args[args_id] = &axis->bufferLUT;
+				else {
+					args[args_id] = axis->outputBuffer;
 					args_id++;
 				}
-				if (axis->specializationConstants.raderUintLUT) {
-					args[args_id] = &axis->bufferRaderUintLUT;
+				if ((axis->specializationConstants.numAxisUploads > 1) && (axis->specializationConstants.axis_upload_id != (axis->specializationConstants.numAxisUploads/2))) {
+					args[args_id] = app->configuration.kernel;
 					args_id++;
 				}
-				if (axis->specializationConstants.useBluesteinFFT && axis->specializationConstants.BluesteinConvolutionStep) {
-					if (axis->specializationConstants.inverseBluestein)
-						args[args_id] = &app->bufferBluesteinIFFT[axis->specializationConstants.axis_id];
-					else
-						args[args_id] = &app->bufferBluesteinFFT[axis->specializationConstants.axis_id];
-					args_id++;
-				}
-				if (axis->specializationConstants.useBluesteinFFT && (axis->specializationConstants.BluesteinPreMultiplication || axis->specializationConstants.BluesteinPostMultiplication)) {
-					args[args_id] = &app->bufferBluestein[axis->specializationConstants.axis_id];
-					args_id++;
-				}
+				//args[args_id] = &axis->pushConstants;
 				if (axis->pushConstants.structSize > 0) {
 					args[args_id] = &axis->pushConstants.data;
 					args_id++;

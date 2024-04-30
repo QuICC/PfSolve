@@ -917,19 +917,15 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	sc->tempLen = sprintf(sc->tempStr, "extern __shared__ float shared[];\n");
 	PfAppendLine(sc);
 	}
-	int64_t estimateMinBlocksPerSM = 0;
-	if(sc->numConsecutiveJWIterations>=6) estimateMinBlocksPerSM = 1; // force big register file to reduce number of blocks per SM and increase L1 size
+	int64_t estimateMinBlocksPerSM = 1;
 	if(sc->localSize[0].data.i>=192) estimateMinBlocksPerSM = 2;
-	/*if (sc->registers_per_thread<48){//this is kind of an estimate numbers with not much testing
+	/*if (sc->registers_per_thread<48) {//this is kind of an estimate numbers with not much testing
 		if (sc->registers_per_thread>24)
 			estimateMinBlocksPerSM = ((16+sc->num_warps_data_parallel-1)/sc->num_warps_data_parallel);//128 registers per thread
 		else
 			estimateMinBlocksPerSM = ((24+sc->num_warps_data_parallel-1)/sc->num_warps_data_parallel);//80 registers per thread
 	}*/
-	if (estimateMinBlocksPerSM > 0)
-		sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ", %" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, estimateMinBlocksPerSM, sc->PfSolveFunctionName);
-	else
-		sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, sc->PfSolveFunctionName);
+	sc->tempLen = sprintf(sc->tempStr, "extern \"C\" __global__ void __launch_bounds__(%" PRIi64 ", %" PRIi64 ") %s ", sc->localSize[0].data.i * sc->localSize[1].data.i * sc->localSize[2].data.i, estimateMinBlocksPerSM, sc->PfSolveFunctionName);
 	PfAppendLine(sc);
 	if (sc->useMultipleInputBuffers) {
 		sc->tempLen = sprintf(sc->tempStr, "(%s* inputs0", floatTypeInputMemory->name);
@@ -943,6 +939,10 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "(%s* inputs, %s* outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
+		PfAppendLine(sc);
+	}
+	if ((sc->numAxisUploads > 1) && (sc->axis_upload_id != (sc->numAxisUploads/2))) {
+		sc->tempLen = sprintf(sc->tempStr, ", %s* %s", floatTypeOutputMemory->name, sc->kernelStruct.name);
 		PfAppendLine(sc);
 	}
 	if (sc->pushConstantsStructSize > 0) {
@@ -1001,6 +1001,10 @@ static inline void appendKernelStart_jw(PfSolveSpecializationConstantsLayout* sc
 	}
 	else {
 		sc->tempLen = sprintf(sc->tempStr, "(const Inputs<%s> inputs, Outputs<%s> outputs", floatTypeInputMemory->name, floatTypeOutputMemory->name);
+		PfAppendLine(sc);
+	}
+	if ((sc->numAxisUploads > 1) && (sc->axis_upload_id != (sc->numAxisUploads/2))) {
+		sc->tempLen = sprintf(sc->tempStr, ", %s* %s", floatTypeOutputMemory->name, sc->kernelStruct.name);
 		PfAppendLine(sc);
 	}
 	if (sc->pushConstantsStructSize > 0) {
@@ -1086,8 +1090,6 @@ static inline void appendKernelStart_block(PfSolveSpecializationConstantsLayout*
 		typeInputMemory = vecTypeInputMemory;
     else 
 		typeInputMemory = floatTypeInputMemory;
-
-	PfAllocateContainerFlexible(sc, &sc->outputsStruct, 50);
 
 	if ((sc->block%10 == 5) || (sc->block%10 == 6) || (sc->block%10 == 7))
 		typeOutputMemory = vecTypeOutputMemory;
