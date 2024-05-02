@@ -28,7 +28,7 @@
 #include "pfSolve_PlanManagement/pfSolve_API_handles/pfSolve_CompileKernel.h"
 #include "pfSolve_AppManagement/pfSolve_DeleteApp.h"
 
-static inline int reorder_i0(int i, int M_size, int Msplit0) {
+static inline int reorder_i0(int i, int M_size, int M_size_align, int Msplit0) {
 	if (Msplit0 == 0){
 #if(VKFFT_BACKEND==1)
 		Msplit0 = 256;
@@ -54,7 +54,7 @@ static inline int reorder_i0(int i, int M_size, int Msplit0) {
 		else if (M_size < 3840*7680) Msplit0 = 7680;*/
 	}
 	int size_0 = M_size;
-	int size_1 = 1;
+	int size_1 = (M_size_align) ? M_size_align : M_size;
 	int used_registers = 0;
 #if(VKFFT_BACKEND==1)
 	if (M_size <= 4352) {
@@ -64,23 +64,23 @@ static inline int reorder_i0(int i, int M_size, int Msplit0) {
 	}
 	else {
 		size_0 = Msplit0;
+		size_1 = Msplit0;
 	}
 #if(VKFFT_BACKEND==1)
 	int warpSize0 = 32;
 #elif(VKFFT_BACKEND==2)
 	int warpSize0 = 64;
 #endif
-	int warpSize = ((uint64_t)ceil(size_0 / (double)(1024))) * 64;
-	if (size_0 < 512) warpSize = warpSize0;
+	int warpSize = ((uint64_t)ceil(size_1 / (double)(1024))) * 64;
+	if (size_1 < 512) warpSize = warpSize0;
 	if (warpSize < warpSize0) warpSize = warpSize0;
 	if (warpSize % warpSize0) warpSize = warpSize0 * ((warpSize + warpSize0 - 1)/warpSize0);
 	
-	used_registers = (size_0 + warpSize - 1)/ warpSize; //adjust
+	used_registers = (size_1 + warpSize - 1)/ warpSize; //adjust
 #if(VKFFT_BACKEND==2)
 	if (used_registers % 2 == 0) used_registers++;
 #endif
-	size_1 = (M_size + size_0 - 1) / size_0;
-
+	
 	int ret_offset = (i / size_0) * size_0;
 	int local_i = (i % size_0);
 
@@ -184,8 +184,8 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.sharedMatricesUpload = 0;
 	axis->specializationConstants.num_warps_data_parallel = 1;//(axis->specializationConstants.useParallelThomas && (axis->specializationConstants.size[1].data.i > 100)) ? 8 : 1;
 	
-	axis->specializationConstants.logicalWarpSize = ((uint64_t)ceil(axis->specializationConstants.M_size.data.i / (double)(1024))) * 64;
-	if (axis->specializationConstants.M_size.data.i < 512) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize;
+	axis->specializationConstants.logicalWarpSize = ((uint64_t)ceil(tempM / (double)(1024))) * 64;
+	if (tempM < 512) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize;
 	if (axis->specializationConstants.logicalWarpSize < app->configuration.warpSize) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize;
 	if (axis->specializationConstants.logicalWarpSize % app->configuration.warpSize) axis->specializationConstants.logicalWarpSize = app->configuration.warpSize * ((axis->specializationConstants.logicalWarpSize + app->configuration.warpSize - 1)/app->configuration.warpSize);
 	
@@ -219,8 +219,6 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	if ((numWarps * app->configuration.warpSize) > app->configuration.maxThreadsNum) numWarps = app->configuration.maxThreadsNum / app->configuration.warpSize;
 	
 	if (axis->specializationConstants.useParallelThomas) {
-		int64_t tempM = axis->specializationConstants.M_size.data.i;
-		if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
 		axis->specializationConstants.registers_per_thread = (uint64_t)ceil(tempM / (double)(app->configuration.warpSize*numWarps));
 		if ((app->configuration.vendorID == 0x1002) && (axis->specializationConstants.registers_per_thread % 2 == 0)) axis->specializationConstants.registers_per_thread++;
 	}

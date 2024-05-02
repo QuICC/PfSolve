@@ -1215,7 +1215,8 @@ static inline void appendTridiagonalSolve_PCR_Thomas(PfSolveSpecializationConsta
 						PfSub(sc, &sc->rd_copy[i], &sc->rd[i], &sc->temp1);
 					PfIf_else(sc);
 					PfMov(sc, &sc->ud_copy[0], &sc->ud[0]);
-					//PfMov(sc, &sc->rd_copy[0], &sc->rd[0]);
+					if (sc->ld_zero)
+						PfMov(sc, &sc->rd_copy[0], &sc->rd[0]);
 					PfIf_end(sc);
 					//sc->tempLen = sprintf(sc->tempStr, "	}\n");
 					//PfAppendLine(sc);

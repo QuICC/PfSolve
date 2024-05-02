@@ -1679,7 +1679,10 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 			PfSetToZero(sc, &sc->ld[i]);
 		}
 		if (!sc->ud_zero) {
-			temp_double.data.d = pfFPinit("-1.0");
+			if (sc->numAxisUploads == 1) //need to fix for multi-upload merged iterations
+				temp_double.data.d = pfFPinit("0.0");
+			else
+				temp_double.data.d = pfFPinit("-1.0");
 			PfMov(sc, &sc->ud[i], &temp_double);
 		}
 
