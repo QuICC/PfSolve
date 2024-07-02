@@ -298,6 +298,12 @@ static inline void appendRegistersInitialization_compute_JW(PfSolveSpecializatio
 	PfDefine(sc, &sc->tempInt, name);
 	PfSetToZero(sc, &sc->tempInt);
 
+	sc->tempInt2.type = 100 + sc->uintTypeCode;
+	PfAllocateContainerFlexible(sc, &sc->tempInt2, 50);
+	sprintf(name, "tempInt2");
+	PfDefine(sc, &sc->tempInt2, name);
+	PfSetToZero(sc, &sc->tempInt2);
+
 	sc->numActiveThreads.type = 100 + sc->uintTypeCode;
 	PfAllocateContainerFlexible(sc, &sc->numActiveThreads, 50);
 	sprintf(name, "numActiveThreads");
@@ -683,6 +689,7 @@ static inline void freeRegistersInitialization_compute_JW(PfSolveSpecializationC
 	PfDeallocateContainer(sc, &sc->temp2);
 
 	PfDeallocateContainer(sc, &sc->tempInt);
+	PfDeallocateContainer(sc, &sc->tempInt2);
 
 	PfDeallocateContainer(sc, &sc->numActiveThreads);
 

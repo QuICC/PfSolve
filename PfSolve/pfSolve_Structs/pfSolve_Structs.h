@@ -236,6 +236,7 @@ typedef struct {
 	int LDA; 
 	int KU;
 	int KL;
+	int ALT_dgbmv; 
 	uint64_t Msplit[3];
 
 	int64_t jw_control_bitmask;
@@ -930,6 +931,8 @@ typedef struct {
 	int numConsecutiveJWIterations;
 	int useMultipleInputBuffers;
 	int64_t jw_control_bitmask;
+	
+	int performALT;
 
 	PfContainer offset_md; //0
 	PfContainer offset_ld; //1

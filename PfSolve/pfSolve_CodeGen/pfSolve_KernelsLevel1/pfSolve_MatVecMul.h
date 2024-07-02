@@ -122,10 +122,12 @@ static inline void appendMatVecMul_ParallelThomas(PfSolveSpecializationConstants
 				PfMov(sc, &sc->rd[i], &sc->md[i]);
 			}
 		}
-		//PfIf_end(sc);
-		/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 
-		*/
+		//PfIf_end(sc);
+		
+		//sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
+		//res = PfAppendLine(sc);
+		
 	}
 	return;
 }
@@ -290,11 +292,16 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 						PfIf_else(sc);
 						PfMov(sc, &sc->temp, &sc->rd[i]);
 						PfIf_end(sc);
-
-						PfSubgroupShuffleDownCyclic(sc, &sc->temp, &sc->temp, 1);
+						if (sc->performALT)
+							PfSubgroupShuffleDownCyclic(sc, &sc->temp, &sc->temp, 2);
+						else
+							PfSubgroupShuffleDownCyclic(sc, &sc->temp, &sc->temp, 1);
 					}
 					else {
-						PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i], 1);
+						if (sc->performALT)
+							PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i], 2);
+						else
+							PfSubgroupShuffleDown(sc, &sc->temp, &sc->rd[i], 1);
 					}
 				}
 				if (!sc->ld_zero) {
@@ -306,11 +313,16 @@ static inline void appendMatVecMul(PfSolveSpecializationConstantsLayout* sc) {
 						PfIf_else(sc);
 						PfMov(sc, &sc->temp1, &sc->rd[i]);
 						PfIf_end(sc);
-
-						PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->temp1, 1);
+						if (sc->performALT)
+							PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->temp1, 2);
+						else
+							PfSubgroupShuffleUpCyclic(sc, &sc->temp1, &sc->temp1, 1);
 					}
 					else {
-						PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i], 1);
+						if (sc->performALT)
+							PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i], 2);
+						else
+							PfSubgroupShuffleUp(sc, &sc->temp1, &sc->rd[i], 1);
 					}
 					if (sc->registers_per_thread > 1)
 						PfMov(sc, &sc->rd_copy[0], &sc->rd[i]);
@@ -375,6 +387,7 @@ static inline void appendMatVecMul_fromGlobal(PfSolveSpecializationConstantsLayo
 	PfContainer temp_int1 = {};
 	temp_int1.type = 31;
 	for (uint64_t j = 0; j < sc->LDA; j++) {
+		if ((sc->performALT) && ((((j % 2) == 1 - ((sc->LDA % 2))) && sc->KL) || (((j % 2) == (sc->LDA % 2)) && sc->KU))) continue;
 		for (uint64_t i = 0; i < sc->registers_per_thread; i++) {
 			/*sc->tempLen = sprintf(sc->tempStr, "	printf(\"%%d  %%f  %%f  %%f\\n\", inoutID, res_%" PRIu64 ", md_%" PRIu64 ", ld_%" PRIu64 ");\n", i, i, i);
 			res = PfAppendLine(sc);

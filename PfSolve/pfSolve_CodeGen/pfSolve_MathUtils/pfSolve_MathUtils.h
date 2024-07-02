@@ -4560,7 +4560,7 @@ static inline void PfSubgroupShuffleDown(PfSolveSpecializationConstantsLayout* s
 		temp_int.data.i = stride;
 		PfMul(sc, &sc->tempInt, &sc->warpID, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
-		
+		if (sc->performALT) PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_z);
 		sc->tempLen = sprintf(sc->tempStr, "\
 sdata[%s] = %s;\n", sc->tempInt.name, in->name);
 		PfAppendLine(sc);
@@ -4602,7 +4602,7 @@ sdata[%s] = %s;\n", sc->tempInt.name, in->name);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
 		temp_int.data.i = sc->warpSize - stride;
 		PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
-
+		if (sc->performALT) PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_z);
 		sc->tempLen = sprintf(sc->tempStr, "\
 %s = sdata[%s];\n", out->name, sc->tempInt.name);
 		PfAppendLine(sc);
@@ -4626,6 +4626,7 @@ static inline void PfSubgroupShuffleUp(PfSolveSpecializationConstantsLayout* sc,
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
 		temp_int.data.i = sc->warpSize - stride;
 		PfSub(sc, &sc->tempInt, &sc->tempInt, &temp_int);
+		if (sc->performALT) PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_z);
 		sc->tempLen = sprintf(sc->tempStr, "\
 sdata[%s] = %s;\n", sc->tempInt.name, in->name);
 		PfAppendLine(sc);
@@ -4665,7 +4666,7 @@ sdata[%s] = %s;\n", sc->tempInt.name, in->name);
 		temp_int.data.i = stride;
 		PfMul(sc, &sc->tempInt, &sc->tempInt, &temp_int, 0);
 		PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->warpInvocationID);
-		
+		if (sc->performALT) PfAdd(sc, &sc->tempInt, &sc->tempInt, &sc->inoutID_z);
 		sc->tempLen = sprintf(sc->tempStr, "\
 %s = sdata[%s];\n", out->name, sc->tempInt.name);
 		PfAppendLine(sc);

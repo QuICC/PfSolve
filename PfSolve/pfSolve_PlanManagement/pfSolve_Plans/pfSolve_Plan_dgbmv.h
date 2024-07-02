@@ -97,6 +97,7 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 	axis->specializationConstants.LDA = app->configuration.LDA;
 	axis->specializationConstants.KU = app->configuration.KU;
 	axis->specializationConstants.KL = app->configuration.KL;
+	axis->specializationConstants.performALT = app->configuration.ALT_dgbmv;
 
 	res = initMemoryParametersAPI(app, &axis->specializationConstants);
 	if (res != PFSOLVE_SUCCESS) {
@@ -129,6 +130,7 @@ static inline PfSolveResult PfSolve_Plan_dgbmv(PfSolveApplication* app, PfSolveP
 
 	//axis->axisBlock[0] = axis->specializationConstants.size[0].data.i;// (axis->specializationConstants.size[1] > app->configuration.aimThreads) ? app->configuration.aimThreads : axis->specializationConstants.size[1];
 	axis->specializationConstants.registers_per_thread = (int)ceil(app->configuration.size[0] / (double)app->configuration.aimThreads);
+	if (axis->specializationConstants.registers_per_thread > 4) axis->specializationConstants.registers_per_thread = 4;
 
 	axis->axisBlock[0] = (uint64_t)ceil(app->configuration.size[0]/ (double)axis->specializationConstants.registers_per_thread);
 	

@@ -27,6 +27,41 @@
 #include "pfSolve_PlanManagement/pfSolve_API_handles/pfSolve_InitAPIParameters.h"
 #include "pfSolve_PlanManagement/pfSolve_API_handles/pfSolve_CompileKernel.h"
 #include "pfSolve_AppManagement/pfSolve_DeleteApp.h"
+static inline int get_ALT_stride(int M_size_align, int Msplit0) {
+	if (Msplit0 == 0){
+#if(VKFFT_BACKEND==1)
+		Msplit0 = 256;
+#elif(VKFFT_BACKEND==2)
+		Msplit0 = 704;
+#endif
+	}
+	int size_1 = M_size_align;
+	int used_registers = 0;
+#if(VKFFT_BACKEND==1)
+	if (M_size_align <= 4352) {
+#elif(VKFFT_BACKEND==2)
+	if (M_size_align <= 3840) {
+#endif
+	}
+	else {
+		size_1 = Msplit0;
+	}
+#if(VKFFT_BACKEND==1)
+	int warpSize0 = 32;
+#elif(VKFFT_BACKEND==2)
+	int warpSize0 = 64;
+#endif
+	int warpSize = ((uint64_t)ceil(size_1 / (double)(1024))) * 64;
+	if (size_1 < 512) warpSize = warpSize0;
+	if (warpSize < warpSize0) warpSize = warpSize0;
+	if (warpSize % warpSize0) warpSize = warpSize0 * ((warpSize + warpSize0 - 1)/warpSize0);
+	
+	used_registers = (size_1 + warpSize - 1)/ warpSize; //adjust
+#if(VKFFT_BACKEND==2)
+	if (used_registers % 2 == 0) used_registers++;
+#endif
+	return used_registers * warpSize;
+}
 
 static inline int reorder_i0(int i, int M_size, int M_size_align, int Msplit0) {
 	if (Msplit0 == 0){
@@ -87,7 +122,8 @@ static inline int reorder_i0(int i, int M_size, int M_size_align, int Msplit0) {
 	if ((((i / size_0) + 1) * size_0) > M_size) {
 		size_0 = M_size % size_0;
 	}
-	int ret = local_i / used_registers;
+	int ret;
+	ret = local_i / used_registers;
 	if ((local_i % used_registers) < (size_0 % used_registers)) {
 		ret += (local_i % used_registers) * ((size_0 + used_registers - 1) / used_registers);
 	}
@@ -97,6 +133,88 @@ static inline int reorder_i0(int i, int M_size, int M_size_align, int Msplit0) {
 		ret += ((local_i % used_registers) - (size_0 % used_registers)) * (size_0 / used_registers);
 	}
 	ret += ret_offset;
+
+	//alt hack warpSize
+	
+	//ret = i / (2 * used_registers) + (i % (2 * used_registers)) * ((M_size + (2*used_registers) - 1) / (2*used_registers));
+	//printf("%d %d\n", i, ret);
+	return ret;
+}
+
+static inline int reorder_i_alt(int i, int M_size, int M_size_align, int Msplit0) {
+	if (Msplit0 == 0){
+#if(VKFFT_BACKEND==1)
+		Msplit0 = 256;
+		/*if (M_size < 3840 * 320) Msplit0 = 320;
+		else if(M_size < 3840*384) Msplit0 = 384;
+		else if(M_size < 3840*448) Msplit0 = 448;
+		else if(M_size < 3840*576) Msplit0 = 576;
+		else if(M_size < 3840*704) Msplit0 = 704;
+		else if(M_size < 3840*832) Msplit0 = 832;*/
+#elif(VKFFT_BACKEND==2)
+		Msplit0 = 704;
+		//if(M_size < 3840*832) Msplit0 = 832;
+#endif
+		/*else if (M_size < 3840 * 960) Msplit0 = 960;
+		else if (M_size < 3840*1152) Msplit0 = 1152;
+		else if (M_size < 3840*1408) Msplit0 = 1408;
+		else if (M_size < 3840*1920) Msplit0 = 1920;
+		else if (M_size < 3840*2496) Msplit0 = 2496;
+		else if (M_size < 3840*3840) Msplit0 = 3840;
+		else if (M_size < 3840*4672) Msplit0 = 4672;
+		else if (M_size < 3840*5632) Msplit0 = 5632;
+		else if (M_size < 3840*6720) Msplit0 = 6720;
+		else if (M_size < 3840*7680) Msplit0 = 7680;*/
+	}
+	int size_0 = M_size;
+	int size_1 = (M_size_align) ? M_size_align : M_size;
+	int used_registers = 0;
+#if(VKFFT_BACKEND==1)
+	if (M_size <= 4352) {
+#elif(VKFFT_BACKEND==2)
+	if (M_size <= 3840) {
+#endif
+	}
+	else {
+		size_0 = Msplit0;
+		size_1 = Msplit0;
+	}
+#if(VKFFT_BACKEND==1)
+	int warpSize0 = 32;
+#elif(VKFFT_BACKEND==2)
+	int warpSize0 = 64;
+#endif
+	int warpSize = ((uint64_t)ceil(size_1 / (double)(1024))) * 64;
+	if (size_1 < 512) warpSize = warpSize0;
+	if (warpSize < warpSize0) warpSize = warpSize0;
+	if (warpSize % warpSize0) warpSize = warpSize0 * ((warpSize + warpSize0 - 1)/warpSize0);
+	
+	used_registers = (size_1 + warpSize - 1)/ warpSize; //adjust
+#if(VKFFT_BACKEND==2)
+	if (used_registers % 2 == 0) used_registers++;
+#endif
+	
+	int ret_offset = (i / size_0) * size_0;
+	int local_i = (i % size_0);
+
+	if ((((i / size_0) + 1) * size_0) > M_size) {
+		size_0 = M_size % size_0;
+	}
+	int ret;
+	int temp = local_i % 2;
+	temp *= warpSize / 2;
+		
+	ret = (local_i/2) % used_registers;
+	ret *= warpSize;
+	ret += temp;
+	temp = (local_i/2) / used_registers;
+	ret += temp;
+	ret += ret_offset;
+
+	//alt hack warpSize
+	
+	//ret = i / (2 * used_registers) + (i % (2 * used_registers)) * ((M_size + (2*used_registers) - 1) / (2*used_registers));
+	//printf("%d %d\n", i, ret);
 	return ret;
 }
 
@@ -144,7 +262,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 			}
 		}
 	}
-	
+	axis->specializationConstants.performALT = ((app->configuration.jw_type/100)%10 == 1)? 1 : 0;
 	//axis->specializationConstants.doublePrecision = app->configuration.doublePrecision;
 	axis->specializationConstants.numCoordinates = app->configuration.coordinateFeatures;
 	axis->specializationConstants.normalize = app->configuration.normalize;
@@ -156,7 +274,13 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	axis->specializationConstants.M_size.data.i = app->localFFTPlan->axisSplit[0][axis_upload_id];
 	axis->specializationConstants.M_size_pow2.type = 31;
 	int64_t tempM = axis->specializationConstants.M_size.data.i;
-	if (!app->configuration.upperBanded) tempM += (app->configuration.numConsecutiveJWIterations-1);
+	if (!app->configuration.upperBanded)
+	{
+		if (axis->specializationConstants.performALT)
+			tempM += 2*(app->configuration.numConsecutiveJWIterations - 1);
+		else
+			tempM += (app->configuration.numConsecutiveJWIterations - 1);
+	}
 	axis->specializationConstants.M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)tempM)));
 
 	axis->specializationConstants.size[0].type = 31;
@@ -248,7 +372,7 @@ static inline PfSolveResult PfSolve_Plan_JonesWorland(PfSolveApplication* app, P
 	}
 
 	axis->specializationConstants.usedSharedMemory.type = 31;
-	if ((axis->specializationConstants.useParallelThomas) || (axis->specializationConstants.numAxisUploads > 1)){
+	if ((axis->specializationConstants.useParallelThomas) || (axis->specializationConstants.performALT) || (axis->specializationConstants.numAxisUploads > 1)){
 		int64_t shared_stride = 2*(axis->specializationConstants.registers_per_thread / 2) + 1;
 		int64_t temp_scale = 1;
 		if (axis->specializationConstants.num_warps_data_parallel > 1) temp_scale = ((axis->specializationConstants.num_warps_data_parallel > 3) || (!axis->specializationConstants.sharedMatricesUpload)) ? axis->specializationConstants.num_warps_data_parallel : 3;

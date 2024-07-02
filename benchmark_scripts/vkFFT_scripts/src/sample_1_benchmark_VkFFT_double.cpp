@@ -2315,25 +2315,25 @@ PfSolveResult sample_1_benchmark_VkFFT_double(VkGPU* vkGPU, uint64_t file_output
 					mpf_set_d(temp_0, 1);
 					mpf_set_d(temp_1, buffer_input_matrix[0][tempM + i]);
 					mpf_div(temp_0, temp_0, temp_1);
-					buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
+					buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
 
 					mpf_set_d(temp_0, buffer_input_matrix[0][i]);
-					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])]);
+					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])]);
 					mpf_mul(temp_0, temp_0, temp_1);
-					buffer_input_matrix_gpu[0][reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
+					buffer_input_matrix_gpu[0][reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
 
 					mpf_set_d(temp_0, buffer_input_matrix[0][2 * tempM + i]);
-					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])]);
+					mpf_set_d(temp_1, buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])]);
 					mpf_mul(temp_0, temp_0, temp_1);
-					buffer_input_matrix_gpu[0][2 * tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
+					buffer_input_matrix_gpu[0][2 * tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])] = mpf_get_d(temp_0);
 				}
 				mpf_clear(temp_0);
 				mpf_clear(temp_1);
 #else
 				for (uint64_t i = 0; i < configuration.size[0]; i++) {
-					buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = 1.0 / buffer_input_matrix[0][tempM + i];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
-					buffer_input_matrix_gpu[0][reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = buffer_input_matrix[0][i] * buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
-					buffer_input_matrix_gpu[0][2 * tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])] = buffer_input_matrix[0][2 * tempM + i] * buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.Msplit[0])];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
+					buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])] = 1.0 / buffer_input_matrix[0][tempM + i];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
+					buffer_input_matrix_gpu[0][reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])] = buffer_input_matrix[0][i] * buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
+					buffer_input_matrix_gpu[0][2 * tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])] = buffer_input_matrix[0][2 * tempM + i] * buffer_input_matrix_gpu[0][tempM + reorder_i0(i, configuration.size[0], configuration.size[0], configuration.Msplit[0])];// buffer_input_matrix_gpu[t][reorder_i(i, tempM, configuration.Msplit[0])];
 				}
 #endif
 				double* buffer_input_systems = (double*)malloc(bufferSolveResSize);

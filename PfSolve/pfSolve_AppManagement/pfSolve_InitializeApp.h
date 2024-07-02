@@ -1209,6 +1209,7 @@ static inline PfSolveResult setConfigurationPfSolve(PfSolveApplication* app, PfS
 	app->configuration.LDA = inputLaunchConfiguration.LDA;
 	app->configuration.KU = inputLaunchConfiguration.KU;
 	app->configuration.KL = inputLaunchConfiguration.KL;
+	app->configuration.ALT_dgbmv = inputLaunchConfiguration.ALT_dgbmv;
 
 	if (inputLaunchConfiguration.bufferOffset != 0)	app->configuration.bufferOffset = inputLaunchConfiguration.bufferOffset;
 	if (inputLaunchConfiguration.tempBufferOffset != 0)	app->configuration.tempBufferOffset = inputLaunchConfiguration.tempBufferOffset;

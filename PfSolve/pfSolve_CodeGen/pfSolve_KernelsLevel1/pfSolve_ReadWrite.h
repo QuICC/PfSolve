@@ -1634,6 +1634,12 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 
 			if (((activeThreads - 1) * used_registers + i) >= sc->M_size.data.i) activeThreads--;
 
+			if (sc->performALT) {
+				if (sc->num_warps_data_parallel > 1) 
+					activeThreads = sc->warpSize;
+				else
+					activeThreads = sc->num_threads;
+			}
 			temp_int.data.i = activeThreads;
 			if (sc->num_warps_data_parallel > 1) 
 				PfIf_lt_start(sc, &sc->warpInvocationID, &temp_int);
@@ -1696,6 +1702,12 @@ static inline void appendGlobalToRegisters_mat_ParallelThomas(PfSolveSpecializat
 
 			if (((activeThreads - 1) * used_registers + i) >= sc->M_size.data.i) activeThreads--;
 
+			if (sc->performALT) {
+				if (sc->num_warps_data_parallel > 1) 
+					activeThreads = sc->warpSize;
+				else
+					activeThreads = sc->num_threads;
+			}
 			temp_int.data.i = activeThreads;
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &temp_int);
 		}
@@ -1795,7 +1807,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			PfAdd(sc, &sc->inoutID, &sc->inoutID, &sc->inoutID_z);
 		}
 
-		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
+		if ((!sc->performALT) && (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)))) {
 			PfIf_lt_start(sc, &sc->inoutID, &sc->M_size);
 		}
 		
@@ -1848,7 +1860,7 @@ static inline void appendGlobalToRegisters_mat(PfSolveSpecializationConstantsLay
 			
 		}
 		
-		if (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul))) {
+		if ((!sc->performALT) && (((i + 1) * sc->num_threads > sc->M_size.data.i) || ((sc->warpSize != sc->num_threads) && (sc->performTriSolve || sc->performMatVecMul)))) {
 			PfIf_end(sc);
 		}
 		if ((sc->numAxisUploads > 1) && ((sc->axis_upload_id == 0) || (sc->axis_upload_id == (sc->numAxisUploads-1)))) {

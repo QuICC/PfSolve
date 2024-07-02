@@ -100,13 +100,18 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			appendReadWrite_rd_uncoalesced(sc, 0);
 		else {
 			appendReadWrite_rd(sc, 0);
-			if (sc->useParallelThomas)
+			if ((sc->useParallelThomas) || (sc->performALT))
 				appendTridiagonalSolve_ParallelThomas_sharedShuffleRead(sc, sc->rd);
 		}
 		
 	}
 	for (int i = 0; i < sc->numConsecutiveJWIterations; i++) {
-		if (i > 0) sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
+		if (i > 0) {
+			if(sc->performALT)
+				sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 2 : sc->M_size.data.i + 2;
+			else
+				sc->M_size.data.i = (sc->upperBanded) ? sc->M_size.data.i - 1 : sc->M_size.data.i + 1;
+		}
 		sc->M_size_pow2.data.i = (int64_t)pow(2, (int)ceil(log2((double)sc->M_size.data.i)));
 		sc->inputBufferId = i;
 		if (sc->upperBanded == 2) {
@@ -200,6 +205,21 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				sc->upperBanded = !sc->upperBanded;
 			}
 		}
+		if (sc->performALT) {
+			if (sc->numAxisUploads > 1) {
+				sc->offset_ld_global.data.i /= sc->size[0].data.i;
+				sc->offset_ud_global.data.i /= sc->size[0].data.i;
+				sc->offset_md_global.data.i /= sc->size[0].data.i;
+			}
+			else {
+				sc->offset_ld_global.data.i /= sc->M_size.data.i;
+				sc->offset_ud_global.data.i /= sc->M_size.data.i;
+				sc->offset_md_global.data.i /= sc->M_size.data.i;
+			}
+			sc->offset_ld_global.data.i *= (sc->registers_per_thread * sc->num_threads);
+			sc->offset_ud_global.data.i *= (sc->registers_per_thread * sc->num_threads);
+			sc->offset_md_global.data.i *= (sc->registers_per_thread * sc->num_threads);			
+		}
 		if((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload)){
 			appendGlobalToShared_mat_ParallelThomas(sc);
 			appendBarrierPfSolve(sc); //this shouldn't be needed, but it is?
@@ -223,7 +243,8 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				sc->ud_zero = 1;
 				sc->ld_zero = 1;
 			}
-			if(sc->useParallelThomas)
+			//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->ud[0]);
+			if ((sc->useParallelThomas) || (sc->performALT))
 				appendMatVecMul_ParallelThomas(sc);
 			else
 				appendMatVecMul(sc);
@@ -303,7 +324,15 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 						sc->offset_ud_global.data.i = sc->M_size.data.i;// sc->offsetV.data.i;
 				}
 			}
+			if (sc->performALT) {
+				sc->offset_ld_global.data.i /= sc->M_size.data.i;
+				sc->offset_ud_global.data.i /= sc->M_size.data.i;
+				sc->offset_md_global.data.i /= sc->M_size.data.i;
 
+				sc->offset_ld_global.data.i *= (sc->registers_per_thread * sc->num_threads);
+				sc->offset_ud_global.data.i *= (sc->registers_per_thread * sc->num_threads);
+				sc->offset_md_global.data.i *= (sc->registers_per_thread * sc->num_threads);			
+			}
 			sc->md_zero = 1;
 			if (sc->performTriSolve != 2)
 			{
@@ -313,7 +342,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 				else
 					appendGlobalToRegisters_mat_ParallelThomas(sc);
 			}
-
+		
 			if ((sc->num_warps_data_parallel > 1) && (sc->sharedMatricesUpload))
 				appendBarrierPfSolve(sc);
 		}
@@ -323,10 +352,12 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 			sc->ud_zero = 0;
 		}
 		if (sc->performTriSolve) {
+			//PfPrintReg(sc, &sc->gl_GlobalInvocationID_x, &sc->rd[0]);
 			if(sc->useParallelThomas)
 				appendTridiagonalSolve_ParallelThomas(sc);
-			else
+			else {
 				appendTridiagonalSolve_PCR_Thomas(sc);
+			}
 		}
 		if (sc->upperBanded) {
 			if (sc->offsetV.type > 100) {
@@ -363,7 +394,7 @@ static inline PfSolveResult PfSolve_shaderGen_JonesWorlandMV(PfSolveSpecializati
 		if (sc->useUncoalescedJWTnoSharedMemory)
 			appendReadWrite_rd_uncoalesced(sc, 1);
 		else {
-			if (sc->useParallelThomas)
+			if ((sc->useParallelThomas) || (sc->performALT))
 				appendTridiagonalSolve_ParallelThomas_sharedShuffleWrite(sc, sc->rd);
 			appendReadWrite_rd(sc, 1);
 		}
